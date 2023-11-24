@@ -59,15 +59,6 @@ CREATE TABLE "orders" (
 	`)
 
 	tx.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS balance(
-			id SERIAL PRIMARY KEY,
-			current NUMERIC(10,2),
-			withdrawn NUMERIC(10,2),
-			fk_user_id INTEGER REFERENCES users(id) NOT NULL
-		)
-	`)
-
-	tx.Exec(ctx, `
 CREATE TABLE "withdrawals" (
   "id" bigserial PRIMARY KEY,
   "user_id" bigint NOT NULL REFERENCES users(id),

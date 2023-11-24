@@ -5,7 +5,6 @@ import (
 	"github.com/Sofja96/gophermarket.git/internal/app/config"
 	"github.com/Sofja96/gophermarket.git/internal/handlers"
 	"github.com/Sofja96/gophermarket.git/internal/middleware"
-	"github.com/Sofja96/gophermarket.git/internal/services"
 	"github.com/Sofja96/gophermarket.git/internal/storage/pg"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
@@ -47,8 +46,8 @@ func New(ctx context.Context) *APIServer {
 	}
 	defer logger.Sync()
 	//	key := c.HashKey
-	as := services.NewAccrualService(c.AccrualAddress)
-	userHandler := handlers.NewUserHandler(store, as)
+	//as := services.NewAccrualService(c.AccrualAddress)
+	//userHandler := handlers.NewUserHandler(store, as)
 	//userHandler := handlers.NewUserHandler(app.storage, app.accrualService, app.pool)
 	a.logger = *logger.Sugar()
 	a.echo.Use(middleware.WithLogging(a.logger))
@@ -62,13 +61,13 @@ func New(ctx context.Context) *APIServer {
 		group.Use(middleware.ValidateUser())
 
 	}
-	{
-		group.POST("/orders", handlers.PostOrder(userHandler))
-		//userAPI.GET("/orders", userHandler.GetOrders)
-		//userAPI.GET("/balance", userHandler.GetBalance)
-		//userAPI.POST("/balance/withdraw", userHandler.WithdrawBalance)
-		//userAPI.GET("/withdrawals", userHandler.GetWithdrawals)
-	}
+	//{
+	//	group.POST("/orders", handlers.PostOrder(userHandler))
+	//	//userAPI.GET("/orders", userHandler.GetOrders)
+	//	//userAPI.GET("/balance", userHandler.GetBalance)
+	//	//userAPI.POST("/balance/withdraw", userHandler.WithdrawBalance)
+	//	//userAPI.GET("/withdrawals", userHandler.GetWithdrawals)
+	//}
 	//a.echo.Use(middleware.GzipMiddleware())
 	//a.echo.POST("/update/", UpdateJSON(store))
 	//a.echo.POST("/updates/", UpdatesBatch(store))
