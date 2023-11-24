@@ -11,10 +11,10 @@ type Postgres struct {
 }
 
 func NewStorage(ctx context.Context, dsn string) (*Postgres, error) {
-	//err := migrateDatabase(dsn)
-	//if err != nil {
-	//	return nil, fmt.Errorf("unable db migrate: %w", err)
-	//}
+	err := migrateDatabase(dsn)
+	if err != nil {
+		return nil, fmt.Errorf("unable db migrate: %w", err)
+	}
 
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
@@ -23,10 +23,10 @@ func NewStorage(ctx context.Context, dsn string) (*Postgres, error) {
 	dbc := &Postgres{
 		DB: pool,
 	}
-	err = dbc.init(context.Background())
-	if err != nil {
-		return nil, fmt.Errorf("error init db: %w", err)
-	}
+	//err = dbc.init(context.Background())
+	//if err != nil {
+	//	return nil, fmt.Errorf("error init db: %w", err)
+	//}
 	return dbc, nil
 }
 
