@@ -7,40 +7,79 @@ import (
 	"github.com/Sofja96/gophermarket.git/internal/models"
 	"github.com/labstack/gommon/log"
 	"strconv"
+	"time"
 )
 
 func (pg *Postgres) CreateOrder(orderNumber, user string) (*models.Order, error) {
 	ctx := context.Background()
-	tx, err := pg.DB.Begin(ctx)
+	cctx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	defer cancel()
+	tx, err := pg.DB.Begin(cctx)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = tx.Rollback(ctx) }()
+	defer func() { _ = tx.Rollback(cctx) }()
 
-	var userID string
-	row := tx.QueryRow(ctx, `SELECT id FROM users WHERE name = $1`, user)
+	var userID uint
+	row := tx.QueryRow(cctx, "SELECT id FROM users WHERE login = $1", user)
 	if err := row.Scan(&userID); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil // Order not found
 		}
 		return nil, err // Other error occurred
 	}
+	log.Print(userID)
 
-	var orderUserId string
-	row = tx.QueryRow(ctx, "SELECT user_id FROM orders WHERE number = $1", orderNumber)
+	var orderUserId uint
+	row = tx.QueryRow(cctx, "SELECT user_id FROM orders WHERE number = $1", orderNumber)
 	if err := row.Scan(&orderUserId); err == nil {
 		if orderUserId == userID {
-			return nil, fmt.Errorf("user already ordered this order: %w", err)
+			log.Infof("order number already exists for this user")
+			return nil, fmt.Errorf("order number already exists for this user: %w", err)
 		}
-		return nil, fmt.Errorf("order number already exists: %w", err)
+		log.Infof("order number already exists for another user")
+		return nil, fmt.Errorf("order number already exists for another user: %w", err)
 	}
+	//}
+	//	}
+	log.Print(orderUserId)
 
-	_, err = tx.Exec(ctx, "INSERT INTO orders (number, user_id, status) VALUES ($1, $2, $3)", orderNumber, userID, models.NEW)
+	//err == nil {
+	//	//log.Infof(orderUserId, "orderUserId")
+	//	log.Print(orderUserId, "orderUserId")
+	//	if orderUserId == userID {
+	//		return nil, fmt.Errorf("user already ordered this order: %w", err)
+	//	}
+	//	return nil, fmt.Errorf("order number already exists: %w", err)
+	//}
+
+	//if userID == orderUserId {
+	//	return nil, fmt.Errorf("user already ordered this order: %w", err)
+	//}
+	//
+	//if len(orderNumber) != 0 {
+	//	return nil, fmt.Errorf("order number already exists: %w", err)
+	//}
+	//_ = tx.QueryRow(ctx, "SELECT number FROM orders WHERE number = $1", orderNumber)
+	//if err != nil {
+	//	return nil, fmt.Errorf("order number already exists: %w", err)
+	//}
+	//ok := tx.QueryRow(ctx, "SELECT number = $1 FROM orders", orderNumber)
+	//if !ok {
+	//	return nil, fmt.Errorf("order number already exists: %w", err)
+	//}
+
+	//err != nil {
+	//	return nil, fmt.Errorf("order number already exists: %w", err)
+	//}
+
+	_, err = tx.Exec(cctx, "INSERT INTO orders (number, user_id, status) VALUES ($1, $2, $3)", orderNumber, userID, models.NEW)
 	if err != nil {
+		log.Infof("error insert")
 		return nil, fmt.Errorf("error get user id: %w", err)
 	}
 
-	err = tx.Commit(ctx)
+	err = tx.Commit(cctx)
 	if err != nil {
 		return nil, err
 	}
@@ -80,8 +119,7 @@ func (pg *Postgres) LockOrders(ctx context.Context, orderID string) error {
 	return pg.lock(ctx, orderID, "orders")
 }
 
-func (pg *Postgres) UpdateOrderStatus(orderID uint, status models.OrderStatus) error {
-	ctx := context.Background()
+func (pg *Postgres) UpdateOrderStatus(ctx context.Context, orderID uint, status models.OrderStatus) error {
 	tx, err := pg.DB.Begin(ctx)
 	if err != nil {
 		return err
@@ -115,10 +153,9 @@ func (pg *Postgres) UpdateOrderStatus(orderID uint, status models.OrderStatus) e
 	return nil
 }
 
-func (pg *Postgres) UpdateOrderAccrualAndUserBalance(orderID uint, userID string, accrualResp models.OrderAccrual) error {
+func (pg *Postgres) UpdateOrderAccrualAndUserBalance(ctx context.Context, orderID uint, userID string, accrualResp models.OrderAccrual) error {
 	log.Infof("UpdateOrderAccrualAndUserBalance params: orderID: %d, userID: %d", orderID, userID)
 
-	ctx := context.Background()
 	tx, err := pg.DB.Begin(ctx)
 	if err != nil {
 		return err

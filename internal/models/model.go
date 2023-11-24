@@ -2,6 +2,10 @@ package models
 
 import "time"
 
+const (
+	ContextKeyUser = "login"
+)
+
 type OrderStatus string
 
 const (

@@ -2,8 +2,10 @@ package middleware
 
 import (
 	"fmt"
+	"github.com/Sofja96/gophermarket.git/internal/models"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
+	"log"
 	"net/http"
 	"time"
 )
@@ -49,39 +51,9 @@ func VerifyToken(tokenString string) (string, error) {
 		return "", fmt.Errorf("token is not valid")
 	}
 
-	fmt.Println("Token os valid")
+	fmt.Println("Token is valid")
 	return claims.User, nil
 }
-
-//func (a *Authenticator) RegisterUser(ctx context.Context, user, password string) (string, error) {
-//	if !checkCredentials(user, password) {
-//		return "", authenticatorer.ErrEmptyCredentials
-//	}
-//
-//	exists, err := a.storage.UserExists(ctx, user)
-//	if err != nil {
-//		return "", fmt.Errorf("error on checking user existance: %w", err)
-//	}
-//	if exists {
-//		return "", authenticatorer.ErrUserExists
-//	}
-//
-//	hash, salt, err := generateHashAndSalt(user, password)
-//	if err != nil {
-//		return "", fmt.Errorf("error on generating user hash and salt: %w", err)
-//	}
-//
-//	if err := a.storage.RegisterUser(ctx, user, hash, salt); err != nil {
-//		return "", fmt.Errorf("error on registering user in storage: %w", err)
-//	}
-//
-//	token, err := a.generateToken(user)
-//	if err != nil {
-//		return "", fmt.Errorf("error on generating token: %w", err)
-//	}
-//
-//	return "Bearer " + token, nil
-//}
 
 func ValidateUser() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -94,13 +66,33 @@ func ValidateUser() echo.MiddlewareFunc {
 			//	return c.JSON(http.StatusInternalServerError, "error on generating token")
 			//}
 			token := c.Request().Header.Get("Authorization")
+			log.Println(token)
 			if err != nil {
+				log.Println(err, "error get he")
 				c.JSON(http.StatusUnauthorized, "You must be logged in to access this resource")
 			}
-			_, err = VerifyToken(token)
+
+			user, err := VerifyToken(token[7:])
 			if err != nil {
+				log.Println(err)
 				c.JSON(http.StatusUnauthorized, "You must be logged in to access this resource")
 			}
+
+			//c.Request().Context().Value(models.ContextKeyUser)
+			//log.Println(c.Request().Context().Value(models.ContextKeyUser))
+			c.Set(models.ContextKeyUser, user)
+			log.Println(c.Get(models.ContextKeyUser))
+			//log.Println(c.Get(user))
+			//log.Println(c.Get(token))
+			//log.Println(c.Request().FormValue(models.ContextKeyUser))
+			//	c.Get(models.ContextKeyUser)
+
+			//claims.(jwt.MapClaims)["id"]
+			//user := token.Claims.(*Token)
+			//var newUser models.User
+			//c.Request().SetBasicAuth(newUser.Login, newUser.Password)
+			//username, _, _ := c.Request().BasicAuth()
+			//log.Println(username, "basicAuth")
 
 			if err = next(c); err != nil {
 				c.Error(err)

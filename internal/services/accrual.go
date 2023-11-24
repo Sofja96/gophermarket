@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/Sofja96/gophermarket.git/internal/models"
@@ -16,7 +17,7 @@ func NewAccrualService(addr string) *AccrualService {
 	return &AccrualService{addr: addr}
 }
 
-func (s *AccrualService) GetStatusAccrual(orderNumber string) (models.OrderAccrual, error) {
+func (s *AccrualService) GetStatusAccrual(ctx context.Context, orderNumber string) (models.OrderAccrual, error) {
 	var orderAccrual models.OrderAccrual
 	url := fmt.Sprintf("%s/api/orders/%s", s.addr, orderNumber)
 

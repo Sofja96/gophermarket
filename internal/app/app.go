@@ -59,15 +59,14 @@ func New(ctx context.Context) *APIServer {
 	{
 		group.POST("/register", handlers.RegisterUser(store))
 		group.POST("/login", handlers.LoginUser(store))
-		//	group.Use(middleware.ValidateUser())
-
-	}
-	{
-		group.POST("/orders", handlers.PostOrder(userHandler))
-		//userAPI.GET("/orders", userHandler.GetOrders)
-		//userAPI.GET("/balance", userHandler.GetBalance)
-		//userAPI.POST("/balance/withdraw", userHandler.WithdrawBalance)
-		//userAPI.GET("/withdrawals", userHandler.GetWithdrawals)
+		group.Use(middleware.ValidateUser())
+		{
+			group.POST("/orders", handlers.PostOrder(userHandler))
+			//userAPI.GET("/orders", userHandler.GetOrders)
+			//userAPI.GET("/balance", userHandler.GetBalance)
+			//userAPI.POST("/balance/withdraw", userHandler.WithdrawBalance)
+			//userAPI.GET("/withdrawals", userHandler.GetWithdrawals)
+		}
 	}
 	//a.echo.Use(middleware.GzipMiddleware())
 	//a.echo.POST("/update/", UpdateJSON(store))
