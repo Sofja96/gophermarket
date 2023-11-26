@@ -16,10 +16,10 @@ func ParseFlags(s *Config) {
 	//flag.StringVar(&s.HashKey, "k", "", "key for hash")
 	flag.Parse()
 
-	if envRunAddr := os.Getenv("ADDRESS"); envRunAddr != "" {
+	if envRunAddr := os.Getenv("RUN_ADDRESS"); envRunAddr != "" {
 		s.Address = envRunAddr
 	}
-	if envRunAddr := os.Getenv("DATABASE_DSN"); envRunAddr != "" {
+	if envRunAddr := os.Getenv("DATABASE_URI"); envRunAddr != "" {
 		s.DatabaseDSN = envRunAddr
 	}
 	if envRunAddr := os.Getenv("ACCRUAL_SYSTEM_ADDRESS"); envRunAddr != "" {
