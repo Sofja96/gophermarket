@@ -28,7 +28,7 @@ func New(ctx context.Context) *APIServer {
 	var err error
 	a := &APIServer{}
 	c := config.LoadConfig()
-	//config.ParseFlags(c)
+	config.ParseFlags(c)
 
 	a.address = c.Address
 	a.echo = echo.New()
