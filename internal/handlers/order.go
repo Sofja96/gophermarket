@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"context"
+	_ "context"
 	"github.com/Sofja96/gophermarket.git/internal/helpers"
 	"github.com/Sofja96/gophermarket.git/internal/models"
 	"github.com/Sofja96/gophermarket.git/internal/services"
@@ -10,7 +10,8 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"time"
+	"sync"
+	_ "time"
 )
 
 type UserHandler struct {
@@ -23,7 +24,8 @@ func NewUserHandler(storage *pg.Postgres, as *services.AccrualService) *UserHand
 	return &UserHandler{storage: storage, accrualService: as}
 }
 
-func PostOrder(uh *UserHandler) echo.HandlerFunc {
+// канал для отправки данных о номере заказа
+func PostOrder(storage *pg.Postgres, ordersChan chan<- string, wg *sync.WaitGroup) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		if c.Request().Header.Get("Content-Type") != "text/plain" {
 			return c.String(http.StatusUnsupportedMediaType, "")
@@ -48,44 +50,49 @@ func PostOrder(uh *UserHandler) echo.HandlerFunc {
 		log.Println(c.Get(models.ContextKeyUser))
 
 		//	order, err := uh.storage.CreateOrder(orderNumber, username)
-		_, err = uh.storage.CreateOrder(orderNumber, username)
+		_, err = storage.CreateOrder(orderNumber, username)
 		if err != nil {
 			return c.String(http.StatusInternalServerError, "Something went wrong")
 		}
+		ordersChan <- orderNumber
+		//val := <-ordersChan
+		//println(val)
 		log.Println(orderNumber, username, "order+user in create")
-		//uh.calcAndApplyAccrual(order, username)
+		//	uh.calcAndApplyAccrual(order, username)
+		//wg.Done() // decrement counter
 		return c.String(http.StatusAccepted, "")
 
 	}
 }
 
 func (uh *UserHandler) calcAndApplyAccrual(order *models.Order, userID string) {
-	//go func() {
-	//ticker := time.NewTicker(1 * time.Second)
-	//defer ticker.Stop()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
-	defer cancel()
-	//ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
-	//defer cancel ()
-	err := uh.storage.UpdateOrderStatus(ctx, order.ID, models.PROCESSING)
-	if err != nil {
-		log.Println("update order status: %v", err)
-	}
-	//	for range ticker.C {
-	resp, err := uh.accrualService.GetStatusAccrual(ctx, order.Number)
-	if err != nil {
-		log.Println("submit order: CalcOrderAccrual: %v", err)
-		return
-	}
-	err = uh.storage.UpdateOrderAccrualAndUserBalance(ctx, order.ID, userID, resp)
-	if err != nil {
-		log.Println("submit order: UpdateOrderAccrualAndUserBalance: %v", err)
-		return
-	}
-	err = uh.storage.UpdateOrderStatus(ctx, order.ID, models.PROCESSED)
-	if err != nil {
-		log.Println("update order status: %v", err)
-	}
-	//	}
-	//	}()
+	go func() {
+		//ticker := time.NewTicker(1 * time.Second)
+		//defer ticker.Stop()
+		//ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+		//defer cancel()
+		//ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+		//defer cancel ()
+		//err := uh.storage.UpdateOrderStatus(order.ID, models.PROCESSING)
+		//if err != nil {
+		//	log.Println("update order status: %v", err)
+		//}
+		//	for range ticker.C {
+		resp, err := uh.accrualService.GetStatusAccrual(order.Number)
+		if err != nil {
+			log.Println("submit order: CalcOrderAccrual: %v", err)
+			return
+		}
+		log.Println(resp, "resp")
+		//err = uh.storage.UpdateOrderAccrualAndUserBalance(ctx, order.ID, userID, resp)
+		//if err != nil {
+		//	log.Println("submit order: UpdateOrderAccrualAndUserBalance: %v", err)
+		//	return
+		//}
+		//err = uh.storage.UpdateOrderStatus(ctx, order.ID, models.PROCESSED)
+		//if err != nil {
+		//	log.Println("update order status: %v", err)
+		//}
+		//	}
+	}()
 }

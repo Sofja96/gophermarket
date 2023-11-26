@@ -2,11 +2,10 @@ package pg
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"github.com/Sofja96/gophermarket.git/internal/models"
+	"github.com/jackc/pgx/v5"
 	"github.com/labstack/gommon/log"
-	"strconv"
 	"time"
 )
 
@@ -23,7 +22,7 @@ func (pg *Postgres) CreateOrder(orderNumber, user string) (*models.Order, error)
 	var userID uint
 	row := tx.QueryRow(cctx, "SELECT id FROM users WHERE login = $1", user)
 	if err := row.Scan(&userID); err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			return nil, nil // Order not found
 		}
 		return nil, err // Other error occurred
@@ -44,35 +43,6 @@ func (pg *Postgres) CreateOrder(orderNumber, user string) (*models.Order, error)
 	//	}
 	log.Print(orderUserId)
 
-	//err == nil {
-	//	//log.Infof(orderUserId, "orderUserId")
-	//	log.Print(orderUserId, "orderUserId")
-	//	if orderUserId == userID {
-	//		return nil, fmt.Errorf("user already ordered this order: %w", err)
-	//	}
-	//	return nil, fmt.Errorf("order number already exists: %w", err)
-	//}
-
-	//if userID == orderUserId {
-	//	return nil, fmt.Errorf("user already ordered this order: %w", err)
-	//}
-	//
-	//if len(orderNumber) != 0 {
-	//	return nil, fmt.Errorf("order number already exists: %w", err)
-	//}
-	//_ = tx.QueryRow(ctx, "SELECT number FROM orders WHERE number = $1", orderNumber)
-	//if err != nil {
-	//	return nil, fmt.Errorf("order number already exists: %w", err)
-	//}
-	//ok := tx.QueryRow(ctx, "SELECT number = $1 FROM orders", orderNumber)
-	//if !ok {
-	//	return nil, fmt.Errorf("order number already exists: %w", err)
-	//}
-
-	//err != nil {
-	//	return nil, fmt.Errorf("order number already exists: %w", err)
-	//}
-
 	_, err = tx.Exec(cctx, "INSERT INTO orders (number, user_id, status) VALUES ($1, $2, $3)", orderNumber, userID, models.NEW)
 	if err != nil {
 		log.Infof("error insert")
@@ -85,6 +55,44 @@ func (pg *Postgres) CreateOrder(orderNumber, user string) (*models.Order, error)
 	}
 
 	return nil, err
+}
+
+func (pg *Postgres) UpdateOrder(orderNumber, status string, accrual float32) error {
+	ctx := context.Background()
+	tx, err := pg.DB.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var userID uint
+	row := tx.QueryRow(ctx, "SELECT user_id FROM orders WHERE number = $1", orderNumber)
+	if err := row.Scan(&userID); err != nil {
+		if err == pgx.ErrNoRows {
+			return err // Order not found
+		}
+		return err // Other error occurred
+	}
+	log.Print(userID)
+
+	_, err = tx.Exec(ctx, "UPDATE orders SET status = $1, accrual = $2 WHERE number = $3", status, accrual, orderNumber)
+	if err != nil {
+		log.Infof("error update values in orders")
+		return fmt.Errorf("error update orders: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, "UPDATE users SET balance = balance + $1 WHERE id = $2", accrual, userID)
+	if err != nil {
+		log.Infof("error update values in users")
+		return fmt.Errorf("error update users: %w", err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (pg *Postgres) lock(ctx context.Context, ID string, what string) error {
@@ -119,25 +127,28 @@ func (pg *Postgres) LockOrders(ctx context.Context, orderID string) error {
 	return pg.lock(ctx, orderID, "orders")
 }
 
-func (pg *Postgres) UpdateOrderStatus(ctx context.Context, orderID uint, status models.OrderStatus) error {
+func (pg *Postgres) UpdateOrderStatus(orderNumber string, status models.OrderStatus) error {
+	ctx := context.Background()
+	//cctx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	//defer cancel()
 	tx, err := pg.DB.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	err = pg.LockOrders(ctx, strconv.Itoa(int(orderID)))
-	if err != nil {
-		_ = tx.Rollback(ctx)
-		return err
-	}
+	//err = pg.LockOrders(ctx, strconv.Itoa(int(orderID)))
+	//if err != nil {
+	//	_ = tx.Rollback(ctx)
+	//	return err
+	//}
 
-	_, err = tx.Prepare(ctx, "status", "UPDATE orders SET status = $1 WHERE id = $2")
-	if err != nil {
-		_ = tx.Rollback(ctx)
-		return err
-	}
-	_, err = tx.Exec(ctx, "status", status, orderID)
+	//_, err = tx.Prepare(ctx, "status", "UPDATE orders SET status = $1 WHERE number = $2")
+	//if err != nil {
+	//	_ = tx.Rollback(ctx)
+	//	return err
+	//}
+	_, err = tx.Exec(ctx, "UPDATE orders SET status = $1 WHERE number = $2", status, orderNumber)
 	//_, err = oStmt.ExecContext(ctx, status, orderID)
 	if err != nil {
 		_ = tx.Rollback(ctx)
@@ -153,8 +164,42 @@ func (pg *Postgres) UpdateOrderStatus(ctx context.Context, orderID uint, status 
 	return nil
 }
 
-func (pg *Postgres) UpdateOrderAccrualAndUserBalance(ctx context.Context, orderID uint, userID string, accrualResp models.OrderAccrual) error {
-	log.Infof("UpdateOrderAccrualAndUserBalance params: orderID: %d, userID: %d", orderID, userID)
+func (pg *Postgres) GetOrderStatus(status models.OrderStatus) (string, error) {
+	ctx := context.Background()
+	//cctx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	//defer cancel()
+	tx, err := pg.DB.Begin(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	//err = pg.LockOrders(ctx, strconv.Itoa(int(orderID)))
+	//if err != nil {
+	//	_ = tx.Rollback(ctx)
+	//	return err
+	//}
+	var order string
+	row := tx.QueryRow(ctx, "SELECT number FROM orders where staus = $1", status)
+	if err := row.Scan(&order); err != nil {
+		if err == pgx.ErrNoRows {
+			return order, err // Order not found
+		}
+		return "", err // Other error occurred
+	}
+	log.Print(order)
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		return "", err
+	}
+
+	return order, nil
+}
+
+func (pg *Postgres) UpdateOrderAccrualAndUserBalance(ctx context.Context, order string, userID string, accrualResp models.OrderAccrual) error {
+	log.Infof("UpdateOrderAccrualAndUserBalance params: orderID: %d, userID: %d", order, userID)
 
 	tx, err := pg.DB.Begin(ctx)
 	if err != nil {
@@ -162,20 +207,20 @@ func (pg *Postgres) UpdateOrderAccrualAndUserBalance(ctx context.Context, orderI
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	err = pg.LockOrders(ctx, strconv.Itoa(int(orderID)))
+	err = pg.LockOrders(ctx, order)
 	if err != nil {
 		_ = tx.Rollback(ctx)
 		return err
 	}
 
-	_, err = tx.Prepare(ctx, "accrual", "UPDATE orders SET accrual = $1, status = $2 WHERE id = $3")
+	_, err = tx.Prepare(ctx, "accrual", "UPDATE orders SET accrual = $1, status = $2 WHERE number = $3")
 	if err != nil {
 		_ = tx.Rollback(ctx)
 		return err
 	}
 	//defer oStmt.Close()
 
-	_, err = tx.Exec(ctx, "accrual", accrualResp.Accrual, accrualResp.Status, orderID)
+	_, err = tx.Exec(ctx, "accrual", accrualResp.Accrual, accrualResp.Status, order)
 	if err != nil {
 		_ = tx.Rollback(ctx)
 		return err

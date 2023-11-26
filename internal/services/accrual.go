@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/Sofja96/gophermarket.git/internal/models"
@@ -17,7 +16,7 @@ func NewAccrualService(addr string) *AccrualService {
 	return &AccrualService{addr: addr}
 }
 
-func (s *AccrualService) GetStatusAccrual(ctx context.Context, orderNumber string) (models.OrderAccrual, error) {
+func (s *AccrualService) GetStatusAccrual(orderNumber string) (models.OrderAccrual, error) {
 	var orderAccrual models.OrderAccrual
 	url := fmt.Sprintf("%s/api/orders/%s", s.addr, orderNumber)
 
@@ -34,9 +33,9 @@ func (s *AccrualService) GetStatusAccrual(ctx context.Context, orderNumber strin
 	defer resp.Body.Close()
 
 	log.Infof("CalcOrderAccrual response status: %d", resp.StatusCode)
-	if resp.StatusCode != http.StatusOK {
-		return orderAccrual, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
+	//if resp.StatusCode != http.StatusOK {
+	//	return orderAccrual, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	//}
 	if resp.StatusCode == http.StatusNoContent {
 		return orderAccrual, fmt.Errorf("order not registered: %d", resp.StatusCode)
 	}
@@ -56,6 +55,7 @@ func (s *AccrualService) GetStatusAccrual(ctx context.Context, orderNumber strin
 	if err == nil {
 		log.Infof("CalcOrderAccrual response: %s", r)
 	}
+	log.Print(resp, "check resp")
 
 	return orderAccrual, nil
 }

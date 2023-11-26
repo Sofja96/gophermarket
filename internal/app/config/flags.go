@@ -10,9 +10,9 @@ import (
 // и сохраняет их значения в соответствующих переменных
 func ParseFlags(s *Config) {
 	//var conf Config
-	flag.StringVar(&s.Address, "a", "", "address and port to run server")
-	flag.StringVar(&s.AccrualAddress, "r", "", "accrual system address ")
-	flag.StringVar(&s.DatabaseDSN, "d", "", "connect to database")
+	flag.StringVar(&s.Address, "a", "localhost:8081", "address and port to run server")
+	flag.StringVar(&s.AccrualAddress, "r", "http://localhost:8080", "accrual system address ")
+	flag.StringVar(&s.DatabaseDSN, "d", "postgres://gophermarket:userpassword@localhost:5432/gophermarket?sslmode=disable", "connect to database")
 	//flag.StringVar(&s.HashKey, "k", "", "key for hash")
 	flag.Parse()
 
