@@ -290,7 +290,6 @@ func (a *APIServer) Start() error {
 	}
 	log.Println("Running server on", a.address)
 
-	a.Shutdown()
 	return nil
 }
 
