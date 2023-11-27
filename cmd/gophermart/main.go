@@ -6,6 +6,7 @@ import (
 	"log"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -15,5 +16,11 @@ func main() {
 	if err := s.Start(); err != nil {
 		log.Fatal(err)
 	}
-	defer s.Shutdown()
+	go func() {
+		c, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		s.Shutdown(c)
+	}()
+
+	//defer s.Shutdown()
 }

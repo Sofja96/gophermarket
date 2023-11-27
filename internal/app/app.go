@@ -293,7 +293,10 @@ func (a *APIServer) Start() error {
 	return nil
 }
 
-func (a *APIServer) Shutdown() {
-	a.Shutdown()
-
+func (a *APIServer) Shutdown(ctx context.Context) {
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		a.Shutdown(ctx)
+	}()
 }
