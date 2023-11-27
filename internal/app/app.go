@@ -90,7 +90,7 @@ func (a *APIServer) checkOrderStatus(ordersChan chan string) {
 	outCh := make(chan models.OrderAccrual, 10)
 	wg.Add(1)
 	go func() {
-		ticker := time.NewTicker(time.Duration(1) * time.Second)
+		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
 		//ctx := context.Background()
 		//ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
@@ -111,7 +111,7 @@ func (a *APIServer) checkOrderStatus(ordersChan chan string) {
 				}
 
 				if resp.Status != string(models.PROCESSED) {
-					time.AfterFunc(5*time.Second, func() {
+					time.AfterFunc(2*time.Second, func() {
 						ordersChan <- order
 					})
 					return
