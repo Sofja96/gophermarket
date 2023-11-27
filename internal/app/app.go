@@ -286,11 +286,13 @@ func startTask(taskChan chan string) {
 }
 
 func (a *APIServer) Start() error {
-	err := a.echo.Start(a.address)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println("Running server on", a.address)
+	go func() {
+		err := a.echo.Start(a.address)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Println("Running server on", a.address)
+	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
