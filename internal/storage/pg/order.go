@@ -98,6 +98,62 @@ func (pg *Postgres) UpdateOrder(orderNumber, status string, accrual float32) err
 	return nil
 }
 
+func (pg *Postgres) GetOrders(user string) ([]models.Order, error) {
+	ctx := context.Background()
+	orders := make([]models.Order, 0)
+	//tx, err := pg.DB.Begin(ctx)
+	//if err != nil {
+	//	return err
+	//}
+	//defer func() { _ = tx.Rollback(ctx) }()
+
+	userID, err := pg.GetUserID(user)
+	if err != nil {
+		return orders, fmt.Errorf("error get if from users: %w", err)
+	}
+
+	row, err := pg.DB.Query(ctx, "SELECT number,status,accrual,uploaded_at FROM orders WHERE user_id = $1", userID)
+	if err != nil {
+		return orders, fmt.Errorf("error select values in orders: %w", err)
+	}
+	defer row.Close()
+
+	for row.Next() {
+		var order models.Order
+		err := row.Scan(&order.Number, &order.Status, &order.Accrual, &order.UploadedAt)
+		if err != nil {
+			return orders, fmt.Errorf("error scan values in orders: %w", err)
+		}
+		orders = append(orders, order)
+	}
+
+	if err := row.Err(); err != nil {
+		if err == pgx.ErrNoRows {
+			return orders, nil
+		}
+
+		return orders, fmt.Errorf("error select values in orders: %w", err)
+	}
+
+	return orders, nil
+}
+
+func (pg *Postgres) GetBalance(user string) (models.UserBalance, error) {
+	ctx := context.Background()
+	var balance models.UserBalance
+
+	row := pg.DB.QueryRow(ctx, "SELECT balance, withdrawn FROM users WHERE login = $1", user)
+	if err := row.Scan(&balance.Current, &balance.Withdrawn); err != nil {
+		if err == pgx.ErrNoRows {
+			return balance, fmt.Errorf("error select balance in users: %w", err)
+		}
+		return balance, err // Other error occurred
+	}
+	log.Print(balance, "balance in bd")
+
+	return balance, nil
+}
+
 func (pg *Postgres) lock(ctx context.Context, ID string, what string) error {
 	tx, err := pg.DB.Begin(ctx)
 	if err != nil {

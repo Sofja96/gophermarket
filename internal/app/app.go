@@ -61,7 +61,9 @@ func New(ctx context.Context) *APIServer {
 		group.POST("/login", handlers.LoginUser(a.store))
 		group.Use(middleware.ValidateUser())
 		{
-			group.POST("/orders", handlers.PostOrder(a.store, orderchan, &wg))
+			group.POST("/orders", handlers.PostOrder(a.store, orderchan))
+			group.GET("/orders", handlers.GetOrders(a.store))
+			group.GET("/balance", handlers.GetBalance(a.store))
 			//	log.Println(<-orderchan)
 			//	log.Println(a.OrdersChan)
 			//userAPI.GET("/orders", userHandler.GetOrders)

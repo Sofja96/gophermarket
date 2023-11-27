@@ -82,6 +82,18 @@ func (pg *Postgres) GetUserIDByName(user string) (bool, error) {
 	return true, nil
 }
 
+func (pg *Postgres) GetUserID(user string) (string, error) {
+	ctx := context.Background()
+	var id string
+	row := pg.DB.QueryRow(ctx, "SELECT id FROM users WHERE login = $1", user)
+	err := row.Scan(&id)
+	if err != nil {
+		return id, fmt.Errorf("unable select id: %w", err)
+	}
+
+	return id, nil
+}
+
 //func (pg *Postgres) getUserID(user string) (string, error) {
 //	ctx := context.Background()
 //	var userID string

@@ -11,7 +11,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"sync"
 	_ "time"
 )
 
@@ -26,7 +25,7 @@ func NewUserHandler(storage *pg.Postgres, as *services.AccrualService) *UserHand
 }
 
 // канал для отправки данных о номере заказа
-func PostOrder(storage *pg.Postgres, ordersChan chan<- string, wg *sync.WaitGroup) echo.HandlerFunc {
+func PostOrder(storage *pg.Postgres, ordersChan chan<- string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		if c.Request().Header.Get("Content-Type") != "text/plain" {
 			return c.String(http.StatusUnsupportedMediaType, "")
@@ -81,6 +80,37 @@ func PostOrder(storage *pg.Postgres, ordersChan chan<- string, wg *sync.WaitGrou
 		//wg.Done() // decrement counter
 		return c.String(http.StatusAccepted, "")
 
+	}
+}
+
+func GetOrders(storage *pg.Postgres) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		user := c.Get(models.ContextKeyUser).(string)
+		orders, err := storage.GetOrders(user)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, "Something went wrong")
+		}
+		if len(orders) == 0 {
+			return c.JSON(http.StatusNoContent, []models.Order{})
+		}
+		return c.JSON(http.StatusOK, orders)
+
+	}
+}
+
+func GetBalance(storage *pg.Postgres) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		//userID := c.MustGet("userID").(float64)
+
+		//user, err := uh.storage.GetUserByID(nil, uint(userID), false)
+		user := c.Get(models.ContextKeyUser).(string)
+		balance, err := storage.GetBalance(user)
+		if err != nil {
+			return c.String(http.StatusInternalServerError, "Something went wrong")
+		}
+
+		//c.JSON(http.StatusOK, models.UserBalance{Current: use, Withdrawn: user.Withdrawn})
+		return c.JSON(http.StatusOK, balance)
 	}
 }
 
