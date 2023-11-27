@@ -2,6 +2,7 @@ package handlers
 
 import (
 	_ "context"
+	"errors"
 	"github.com/Sofja96/gophermarket.git/internal/helpers"
 	"github.com/Sofja96/gophermarket.git/internal/models"
 	"github.com/Sofja96/gophermarket.git/internal/services"
@@ -52,6 +53,12 @@ func PostOrder(storage *pg.Postgres, ordersChan chan<- string, wg *sync.WaitGrou
 		//	order, err := uh.storage.CreateOrder(orderNumber, username)
 		_, err = storage.CreateOrder(orderNumber, username)
 		if err != nil {
+			if errors.Is(err, helpers.ErrAnotherUserOrder) {
+				return c.String(http.StatusConflict, "order number already exists for another user")
+			}
+			if errors.Is(err, helpers.ErrExistsOrder) {
+				return c.String(http.StatusOK, "order number already exists")
+			}
 			return c.String(http.StatusInternalServerError, "Something went wrong")
 		}
 		ordersChan <- orderNumber
