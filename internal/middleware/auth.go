@@ -16,7 +16,10 @@ type Claims struct {
 }
 
 const JwtSecret = "JWT_SECRET"
+
 const TokenExp = time.Hour * 24
+
+//const TokenExp = time.Second * 24
 
 func CreateToken(user string) (string, error) {
 	claims := Claims{
@@ -55,24 +58,24 @@ func VerifyToken(tokenString string) (string, error) {
 	return claims.User, nil
 }
 
+const BearerSchema = "Bearer "
+
 func ValidateUser() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) (err error) {
-			//if len(user) == 0 && len(password) == 0 {
-			//	return c.JSON(http.StatusBadRequest, "empty credentials")
-			//}
-			//token, err := CreateToken(user)
-			//if err != nil {
-			//	return c.JSON(http.StatusInternalServerError, "error on generating token")
-			//}
-			token := c.Request().Header.Get("Authorization")
-			log.Println(token)
-			if err != nil {
-				log.Println(err, "error get he")
-				c.JSON(http.StatusUnauthorized, "You must be logged in to access this resource")
+			authHeader := c.Request().Header.Get("Authorization")
+			if authHeader == "" {
+				return c.JSON(http.StatusUnauthorized, "You must be logged in to access this resource")
 			}
+			token := authHeader[len(BearerSchema):]
+			//if token == "" {
+			//	//return c.JSON(http.StatusUnauthorized, "You must be logged in to access this resource")
+			//}
+			log.Println(token, "header")
 
-			user, err := VerifyToken(token[7:])
+			//user, err := VerifyToken("Bearer" + token)
+			log.Println(token, "token")
+			user, err := VerifyToken(token)
 			if err != nil {
 				log.Println(err)
 				c.JSON(http.StatusUnauthorized, "You must be logged in to access this resource")

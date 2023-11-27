@@ -3,6 +3,7 @@ package pg
 import (
 	"context"
 	"fmt"
+	"github.com/Sofja96/gophermarket.git/internal/helpers"
 	"github.com/Sofja96/gophermarket.git/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/labstack/gommon/log"
@@ -23,7 +24,7 @@ func (pg *Postgres) CreateOrder(orderNumber, user string) (*models.Order, error)
 	row := tx.QueryRow(cctx, "SELECT id FROM users WHERE login = $1", user)
 	if err := row.Scan(&userID); err != nil {
 		if err == pgx.ErrNoRows {
-			return nil, nil // Order not found
+			return nil, err // Order not found
 		}
 		return nil, err // Other error occurred
 	}
@@ -34,10 +35,12 @@ func (pg *Postgres) CreateOrder(orderNumber, user string) (*models.Order, error)
 	if err := row.Scan(&orderUserId); err == nil {
 		if orderUserId == userID {
 			log.Infof("order number already exists for this user")
-			return nil, fmt.Errorf("order number already exists for this user: %w", err)
+			return nil, helpers.ErrExistsOrder
+			//return nil, fmt.Errorf("order number already exists for this user: %w", err)
 		}
 		log.Infof("order number already exists for another user")
-		return nil, fmt.Errorf("order number already exists for another user: %w", err)
+		return nil, helpers.ErrAnotherUserOrder
+		//	return nil, fmt.Errorf("order number already exists for another user: %w", err)
 	}
 	//}
 	//	}

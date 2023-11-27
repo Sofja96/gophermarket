@@ -53,6 +53,18 @@ func PostOrder(storage *pg.Postgres, ordersChan chan<- string, wg *sync.WaitGrou
 		//	order, err := uh.storage.CreateOrder(orderNumber, username)
 		_, err = storage.CreateOrder(orderNumber, username)
 		if err != nil {
+			//switch {
+			//case errors.Is(err, helpers.ErrAnotherUserOrder):
+			//	log.Println(err)
+			//	return c.String(http.StatusConflict, "order number already exists for another user")
+			//case errors.Is(err, helpers.ErrExistsOrder):
+			//	log.Println(err)
+			//	return c.String(http.StatusOK, "order number already exists")
+			////errors.New()
+			//default:
+			//	return c.String(http.StatusInternalServerError, "Something went wrong")
+			//
+			//}
 			if errors.Is(err, helpers.ErrAnotherUserOrder) {
 				return c.String(http.StatusConflict, "order number already exists for another user")
 			}
