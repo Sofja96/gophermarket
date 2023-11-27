@@ -12,7 +12,7 @@ import (
 
 func (pg *Postgres) CreateOrder(orderNumber, user string) (*models.Order, error) {
 	ctx := context.Background()
-	cctx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	cctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 	tx, err := pg.DB.Begin(cctx)
 	if err != nil {

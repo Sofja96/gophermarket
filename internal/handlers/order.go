@@ -93,6 +93,7 @@ func GetOrders(storage *pg.Postgres) echo.HandlerFunc {
 		if len(orders) == 0 {
 			return c.JSON(http.StatusNoContent, []models.Order{})
 		}
+		c.Response().Header().Set("Content-Type", "application/json")
 		return c.JSON(http.StatusOK, orders)
 
 	}
