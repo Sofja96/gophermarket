@@ -11,6 +11,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 	"log"
+	"os"
+	"os/signal"
 	"sync"
 	"time"
 )
@@ -290,13 +292,21 @@ func (a *APIServer) Start() error {
 	}
 	log.Println("Running server on", a.address)
 
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt)
+	<-quit
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := a.echo.Shutdown(ctx); err != nil {
+		log.Fatal(err)
+	}
 	return nil
 }
 
-func (a *APIServer) Shutdown(ctx context.Context) {
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		a.Shutdown(ctx)
-	}()
-}
+//func (a *APIServer) Shutdown() {
+//	go func() {
+//		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+//		defer cancel()
+//		a.Shutdown(ctx)
+//	}()
+//}
