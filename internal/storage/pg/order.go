@@ -20,18 +20,22 @@ func (pg *Postgres) CreateOrder(orderNumber, user string) (*models.Order, error)
 	}
 	defer func() { _ = tx.Rollback(cctx) }()
 
-	var userID uint
-	row := tx.QueryRow(cctx, "SELECT id FROM users WHERE login = $1", user)
-	if err := row.Scan(&userID); err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, err // Order not found
-		}
-		return nil, err // Other error occurred
+	//var userID uint
+	//row := tx.QueryRow(cctx, "SELECT id FROM users WHERE login = $1", user)
+	//if err := row.Scan(&userID); err != nil {
+	//	if err == pgx.ErrNoRows {
+	//		return nil, err // Order not found
+	//	}
+	//	return nil, err // Other error occurred
+	//}
+
+	userID, err := pg.GetUserID(user)
+	if err != nil {
+		return nil, fmt.Errorf("error get if from users: %w", err)
 	}
 	log.Print(userID)
-
-	var orderUserId uint
-	row = tx.QueryRow(cctx, "SELECT user_id FROM orders WHERE number = $1", orderNumber)
+	var orderUserId string
+	row := tx.QueryRow(cctx, "SELECT user_id FROM orders WHERE number = $1", orderNumber)
 	if err := row.Scan(&orderUserId); err == nil {
 		if orderUserId == userID {
 			log.Infof("order number already exists for this user")
@@ -111,8 +115,9 @@ func (pg *Postgres) GetOrders(user string) ([]models.Order, error) {
 	if err != nil {
 		return orders, fmt.Errorf("error get if from users: %w", err)
 	}
-
-	row, err := pg.DB.Query(ctx, "SELECT number,status,accrual,uploaded_at FROM orders WHERE user_id = $1", userID)
+	//ORDER BY
+	//			uploaded_at ASC
+	row, err := pg.DB.Query(ctx, "SELECT number,status,accrual,uploaded_at FROM orders WHERE user_id = $1 ORDER BY uploaded_at DESC", userID)
 	if err != nil {
 		return orders, fmt.Errorf("error select values in orders: %w", err)
 	}

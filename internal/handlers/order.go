@@ -64,9 +64,9 @@ func PostOrder(storage *pg.Postgres, ordersChan chan<- string) echo.HandlerFunc 
 			//	return c.String(http.StatusInternalServerError, "Something went wrong")
 			//
 			//}
-			if errors.Is(err, helpers.ErrAnotherUserOrder) {
-				return c.String(http.StatusConflict, "order number already exists for another user")
-			}
+			//if errors.Is(err, helpers.ErrAnotherUserOrder) {
+			//	return c.String(http.StatusConflict, "order number already exists for another user")
+			//}
 			if errors.Is(err, helpers.ErrExistsOrder) {
 				return c.String(http.StatusOK, "order number already exists")
 			}
@@ -101,16 +101,13 @@ func GetOrders(storage *pg.Postgres) echo.HandlerFunc {
 
 func GetBalance(storage *pg.Postgres) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		//userID := c.MustGet("userID").(float64)
-
-		//user, err := uh.storage.GetUserByID(nil, uint(userID), false)
 		user := c.Get(models.ContextKeyUser).(string)
 		balance, err := storage.GetBalance(user)
 		if err != nil {
 			return c.String(http.StatusInternalServerError, "Something went wrong")
 		}
 
-		//c.JSON(http.StatusOK, models.UserBalance{Current: use, Withdrawn: user.Withdrawn})
+		c.Response().Header().Set("Content-Type", "application/json")
 		return c.JSON(http.StatusOK, balance)
 	}
 }
