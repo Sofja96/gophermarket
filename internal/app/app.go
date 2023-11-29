@@ -48,6 +48,7 @@ func New(ctx context.Context) *APIServer {
 	a.accrualService = services.NewAccrualService(c.AccrualAddress, a.store)
 	a.logger = *logger.Sugar()
 	a.echo.Use(middleware.WithLogging(a.logger))
+	a.echo.Use(middleware.GzipMiddleware())
 
 	go a.accrualService.UpdateOrdersStatus()
 
