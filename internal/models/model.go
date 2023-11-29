@@ -21,7 +21,6 @@ type User struct {
 	Password string `json:"password"`
 }
 type Order struct {
-	//ID         uint      `json:"id"`
 	Number     string    `json:"number"`
 	Status     string    `json:"status"`
 	Accrual    float32   `json:"accrual"`

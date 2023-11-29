@@ -15,6 +15,4 @@ func main() {
 	if err := s.Start(); err != nil {
 		log.Fatal(err)
 	}
-
-	//defer s.Shutdown()
 }

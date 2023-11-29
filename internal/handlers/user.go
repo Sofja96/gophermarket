@@ -15,10 +15,6 @@ func RegisterUser(storage *pg.Postgres) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var newUser models.User
 		var err error
-		//err = c.Bind(&newUser)
-		//if err != nil {
-		//	return c.JSON(http.StatusBadRequest, err)
-		//}
 		if err := json.NewDecoder(c.Request().Body).Decode(&newUser); err != nil {
 			return c.JSON(http.StatusBadRequest, "")
 		}
@@ -37,13 +33,6 @@ func RegisterUser(storage *pg.Postgres) echo.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		//err = internal.CheckPassword(newUser.Password, hash)
-		//if err != nil {
-		//	return c.JSON(http.StatusUnauthorized, "password is not coorect")
-		//}
-		//if err := json.NewDecoder(c.Request().Body).Decode(&newUser); err != nil {
-		//	return c.JSON(http.StatusBadRequest, "")
-		//}
 		_, err = storage.CreateUser(newUser.Login, hash)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, "user creation error")
@@ -55,12 +44,9 @@ func RegisterUser(storage *pg.Postgres) echo.HandlerFunc {
 			return err
 		}
 		var bearer = "Bearer " + token
-		//	c.Response().Header().Set("Content-Type", "text/plain; charset=utf-8")
 		c.Response().Header().Set("Authorization", bearer)
 		return c.JSON(http.StatusOK, newUser)
 
-		//c.Response().Header().Set("Content-Type", "application/json")
-		//return c.JSON(http.StatusOK, newUser)
 	}
 }
 
@@ -68,10 +54,7 @@ func LoginUser(storage *pg.Postgres) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var newUser models.User
 		var err error
-		//err = c.Bind(&newUser)
-		//if err != nil {
-		//	return c.JSON(http.StatusBadRequest, err)
-		//}
+
 		if err := json.NewDecoder(c.Request().Body).Decode(&newUser); err != nil {
 			return c.JSON(http.StatusBadRequest, "")
 		}

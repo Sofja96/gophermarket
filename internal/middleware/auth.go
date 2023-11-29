@@ -69,13 +69,8 @@ func ValidateUser() echo.MiddlewareFunc {
 				return c.JSON(http.StatusUnauthorized, "You must be logged in to access this resource")
 			}
 			token := authHeader[len(BearerSchema):]
-			//if token == "" {
-			//	//return c.JSON(http.StatusUnauthorized, "You must be logged in to access this resource")
-			//}
-			//log.Println(token, "header")
 			helpers.Infof(token, "header")
 
-			//user, err := VerifyToken("Bearer" + token)
 			log.Println(token, "token")
 			user, err := VerifyToken(token)
 			if err != nil {
@@ -83,21 +78,8 @@ func ValidateUser() echo.MiddlewareFunc {
 				c.JSON(http.StatusUnauthorized, "You must be logged in to access this resource")
 			}
 
-			//c.Request().Context().Value(models.ContextKeyUser)
-			//log.Println(c.Request().Context().Value(models.ContextKeyUser))
 			c.Set(models.ContextKeyUser, user)
 			log.Println(c.Get(models.ContextKeyUser))
-			//log.Println(c.Get(user))
-			//log.Println(c.Get(token))
-			//log.Println(c.Request().FormValue(models.ContextKeyUser))
-			//	c.Get(models.ContextKeyUser)
-
-			//claims.(jwt.MapClaims)["id"]
-			//user := token.Claims.(*Token)
-			//var newUser models.User
-			//c.Request().SetBasicAuth(newUser.Login, newUser.Password)
-			//username, _, _ := c.Request().BasicAuth()
-			//log.Println(username, "basicAuth")
 
 			if err = next(c); err != nil {
 				c.Error(err)
