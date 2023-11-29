@@ -6,7 +6,6 @@ import (
 	"github.com/Sofja96/gophermarket.git/internal/helpers"
 	"github.com/Sofja96/gophermarket.git/internal/models"
 	"github.com/jackc/pgx/v5"
-	"github.com/labstack/gommon/log"
 )
 
 func (pg *Postgres) WithdrawBalance(user, orderNumber string, sum float32) error {
@@ -21,7 +20,6 @@ func (pg *Postgres) WithdrawBalance(user, orderNumber string, sum float32) error
 	if err != nil {
 		return fmt.Errorf("error get id from users: %w", err)
 	}
-	log.Print(userID)
 
 	balance, err := pg.GetBalance(user)
 	if err != nil {
@@ -36,13 +34,11 @@ func (pg *Postgres) WithdrawBalance(user, orderNumber string, sum float32) error
 
 	_, err = tx.Exec(ctx, "UPDATE users SET balance = $1, withdrawn = withdrawn + $2 WHERE id = $3", newBalance, sum, userID)
 	if err != nil {
-		log.Infof("error update values in users with balance")
 		return fmt.Errorf("error update values in users with balance: %w", err)
 	}
 
 	_, err = tx.Exec(ctx, "INSERT INTO withdrawals (user_id, number, sum) VALUES ($1, $2, $3)", userID, orderNumber, sum)
 	if err != nil {
-		log.Infof("error insert values in withdrawals")
 		return fmt.Errorf("error insert values in withdrawals: %w", err)
 	}
 
@@ -50,7 +46,7 @@ func (pg *Postgres) WithdrawBalance(user, orderNumber string, sum float32) error
 	if err != nil {
 		return err
 	}
-	log.Infof("WithdrawBalance: Successfully updated")
+	helpers.Infof("WithdrawBalance: Successfully updated")
 
 	return nil
 }

@@ -24,8 +24,6 @@ func WithLogging(sugar zap.SugaredLogger) echo.MiddlewareFunc {
 			sugar.Infoln(
 				"uri", req.RequestURI,
 				"method", req.Method,
-				//	"body", req.Body,
-				//	"length", req.ContentLength,
 				"duration", duration,
 				"status:", resp.Status,
 				"size:", resp.Size,

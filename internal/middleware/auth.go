@@ -2,11 +2,9 @@ package middleware
 
 import (
 	"fmt"
-	"github.com/Sofja96/gophermarket.git/internal/helpers"
 	"github.com/Sofja96/gophermarket.git/internal/models"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
-	"log"
 	"net/http"
 	"time"
 )
@@ -19,8 +17,6 @@ type Claims struct {
 const JwtSecret = "JWT_SECRET"
 
 const TokenExp = time.Hour * 24
-
-//const TokenExp = time.Second * 24
 
 func CreateToken(user string) (string, error) {
 	claims := Claims{
@@ -69,17 +65,13 @@ func ValidateUser() echo.MiddlewareFunc {
 				return c.JSON(http.StatusUnauthorized, "You must be logged in to access this resource")
 			}
 			token := authHeader[len(BearerSchema):]
-			helpers.Infof(token, "header")
 
-			log.Println(token, "token")
 			user, err := VerifyToken(token)
 			if err != nil {
-				log.Println(err)
 				c.JSON(http.StatusUnauthorized, "You must be logged in to access this resource")
 			}
 
 			c.Set(models.ContextKeyUser, user)
-			log.Println(c.Get(models.ContextKeyUser))
 
 			if err = next(c); err != nil {
 				c.Error(err)

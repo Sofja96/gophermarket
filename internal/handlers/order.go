@@ -8,7 +8,6 @@ import (
 	"github.com/Sofja96/gophermarket.git/internal/storage/pg"
 	"github.com/labstack/echo/v4"
 	"io"
-	"log"
 	"net/http"
 	_ "time"
 )
@@ -26,7 +25,7 @@ func PostOrder(storage *pg.Postgres) echo.HandlerFunc {
 		defer c.Request().Body.Close()
 
 		orderNumber := string(body)
-		log.Printf("SubmitOrder with order number: %s\n", orderNumber)
+		helpers.Infof("SubmitOrder with order number: %s\n", orderNumber)
 		if len(orderNumber) == 0 {
 			return c.String(http.StatusBadRequest, "Empty request body")
 		}
@@ -35,7 +34,6 @@ func PostOrder(storage *pg.Postgres) echo.HandlerFunc {
 			return c.String(http.StatusUnprocessableEntity, "Wrong number of order format")
 		}
 		username := c.Get(models.ContextKeyUser).(string)
-		log.Println(c.Get(models.ContextKeyUser))
 
 		_, err = storage.CreateOrder(orderNumber, username)
 		if err != nil {
@@ -47,7 +45,6 @@ func PostOrder(storage *pg.Postgres) echo.HandlerFunc {
 			}
 			return c.String(http.StatusInternalServerError, "Something went wrong")
 		}
-		log.Println(orderNumber, username, "order+user in create")
 		return c.String(http.StatusAccepted, "")
 
 	}

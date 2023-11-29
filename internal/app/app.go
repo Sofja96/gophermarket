@@ -10,7 +10,6 @@ import (
 	"github.com/Sofja96/gophermarket.git/internal/storage/pg"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
-	"log"
 	"os"
 	"os/signal"
 	"time"
@@ -36,14 +35,12 @@ func New(ctx context.Context) *APIServer {
 	a.echo = echo.New()
 	a.store, err = pg.NewStorage(ctx, c.DatabaseDSN)
 	if err != nil {
-		log.Print(err)
+		helpers.Error("error creation storage: %w", err)
 	}
-	log.Println(c.DatabaseDSN)
+	//TODO delete log
+	helpers.Debug(c.DatabaseDSN)
 
-	logger, err := zap.NewDevelopment()
-	if err != nil {
-		panic(err)
-	}
+	logger, _ := zap.NewDevelopment()
 	defer logger.Sync()
 	a.accrualService = services.NewAccrualService(c.AccrualAddress, a.store)
 	a.logger = *logger.Sugar()
@@ -72,7 +69,7 @@ func (a *APIServer) Start() error {
 	go func() {
 		err := a.echo.Start(a.address)
 		if err != nil {
-			log.Fatal(err)
+			helpers.Fatal("error start GopherMart %s", err)
 		}
 		helpers.Infof("starting the GopherMart server...%s", a.address)
 	}()
@@ -83,7 +80,7 @@ func (a *APIServer) Start() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := a.echo.Shutdown(ctx); err != nil {
-		log.Fatal(err)
+		helpers.Fatal("error shutting down gracefully %s", err)
 	}
 	return nil
 }
