@@ -73,7 +73,7 @@ func (a *APIServer) Start() error {
 		if err != nil {
 			log.Fatal(err)
 		}
-		helpers.Infof("starting the GopherMart server...", a.address)
+		helpers.Infof("starting the GopherMart server...%s", a.address)
 	}()
 
 	quit := make(chan os.Signal, 1)

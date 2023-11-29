@@ -64,5 +64,5 @@ func migrateDatabase(dsn string) error {
 	//}
 	//
 	//log.Infof("Migration done. Current schema version: %v\n", ver)
-	return nil
+	//return nil
 }

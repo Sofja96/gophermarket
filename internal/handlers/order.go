@@ -26,7 +26,7 @@ func PostOrder(storage *pg.Postgres) echo.HandlerFunc {
 		defer c.Request().Body.Close()
 
 		orderNumber := string(body)
-		log.Println("SubmitOrder with order number: %s", orderNumber)
+		log.Printf("SubmitOrder with order number: %s\n", orderNumber)
 		if len(orderNumber) == 0 {
 			return c.String(http.StatusBadRequest, "Empty request body")
 		}

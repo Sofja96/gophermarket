@@ -26,17 +26,17 @@ func (pg *Postgres) CreateOrder(orderNumber, user string) (*models.Order, error)
 		return nil, fmt.Errorf("error get if from users: %w", err)
 	}
 	log.Print(userID)
-	var orderUserId string
+	var orderUserID string
 	row := tx.QueryRow(cctx, "SELECT user_id FROM orders WHERE number = $1", orderNumber)
-	if err := row.Scan(&orderUserId); err == nil {
-		if orderUserId == userID {
+	if err := row.Scan(&orderUserID); err == nil {
+		if orderUserID == userID {
 			log.Infof("order number already exists for this user")
 			return nil, helpers.ErrExistsOrder
 		}
 		log.Infof("order number already exists for another user")
 		return nil, helpers.ErrAnotherUserOrder
 	}
-	log.Print(orderUserId)
+	log.Print(orderUserID)
 
 	_, err = tx.Exec(cctx, "INSERT INTO orders (number, user_id, status) VALUES ($1, $2, $3)", orderNumber, userID, models.NEW)
 	if err != nil {
@@ -74,7 +74,7 @@ func (pg *Postgres) UpdateOrder(orderNumber, status string, accrual float32) err
 	rows := tx.QueryRow(ctx, "SELECT number,status,accrual,uploaded_at,user_id FROM orders WHERE number = $1 FOR UPDATE SKIP LOCKED", orderNumber)
 	if err := rows.Scan(&order.Number, &order.Status, &order.Accrual, &order.UploadedAt, &userID); err != nil {
 		if err == pgx.ErrNoRows {
-			helpers.Infof("error scan values in orders: %w", err)
+			helpers.Infof("error scan values in orders: %s", err)
 			return fmt.Errorf("error scan values in orders: %w", err)
 		}
 		return err
@@ -87,14 +87,14 @@ func (pg *Postgres) UpdateOrder(orderNumber, status string, accrual float32) err
 	helpers.Infof(orderNumber, "orderNumber before update")
 	_, err = tx.Exec(ctx, "UPDATE orders SET status = $1, accrual = $2 WHERE number = $3", status, accrual, orderNumber)
 	if err != nil {
-		helpers.Infof("error update values in orders", status, accrual, orderNumber)
+		helpers.Infof("error update values in orders %s", status, accrual, orderNumber)
 		//log.Infof("error update values in orders")
 		return fmt.Errorf("error update orders: %w", err)
 	}
 
 	_, err = tx.Exec(ctx, "UPDATE users SET balance = coalesce(balance, 0) + $1 WHERE id = $2", accrual, userID)
 	if err != nil {
-		helpers.Infof("error update values in users", accrual, userID)
+		helpers.Infof("error update values in users %s", accrual, userID)
 		return fmt.Errorf("error update users: %w", err)
 	}
 

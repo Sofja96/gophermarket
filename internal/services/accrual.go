@@ -78,11 +78,11 @@ func (s *AccrualService) GetStatusOrder(outCh chan<- string, wg *sync.WaitGroup)
 	}
 
 	for _, order := range statusOrderNew {
-		helpers.Infof("Sent New:", order)
+		helpers.Infof("Sent New: %s", order)
 		outCh <- order
 	}
 	for _, order := range statusOrderProc {
-		helpers.Infof("Sent Proc:", order)
+		helpers.Infof("Sent Proc: %s", order)
 		outCh <- order
 	}
 }
@@ -113,7 +113,7 @@ func (s *AccrualService) UpdateOrdersStatus() {
 		helpers.Infof("Received started")
 		for range reportTicker.C {
 			for order := range ordersChan {
-				helpers.Infof("Received:", order)
+				helpers.Infof("Received: %s", order)
 				resp, err := s.GetStatusAccrual(order, &wg)
 				if err != nil {
 					log.Infof("submit order: CalcOrderAccrual: %v", err)
@@ -148,14 +148,14 @@ func (s *AccrualService) UpdateOrdersStatus() {
 	wg.Wait()
 }
 
-func startTask(taskChan chan string) {
-	for {
-		select {
-		case <-taskChan:
-			return
-		default:
-			break
-			//	log.Println("Задача выполняется...")
-		}
-	}
-}
+//func startTask(taskChan chan string) {
+//	for {
+//		select {
+//		case <-taskChan:
+//			return
+//		default:
+//			break
+//				log.Println("Задача выполняется...")
+//		}
+//	}
+//}
