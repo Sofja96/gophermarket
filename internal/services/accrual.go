@@ -6,6 +6,7 @@ import (
 	"github.com/Sofja96/gophermarket.git/internal/helpers"
 	"github.com/Sofja96/gophermarket.git/internal/models"
 	"github.com/Sofja96/gophermarket.git/internal/storage/pg"
+	"strconv"
 	"sync"
 
 	//"github.com/gammazero/workerpool"
@@ -87,7 +88,11 @@ func (s *AccrualService) GetStatusOrder(outCh chan<- string, wg *sync.WaitGroup)
 	for _, order := range statusOrder {
 		helpers.Infof("Sent:", order)
 		outCh <- order
+		//if len(outCh) > 0 {
+		//	outCh <- order
+		//}
 	}
+
 	//wg.Done()
 	//	close(outCh)
 	//	wg.Done()
@@ -372,7 +377,7 @@ func (s *AccrualService) CheckOrderStatus() {
 	//	close(outCh)
 }
 
-func (s *AccrualService) UpdateOrdersStatus(ordersChans chan string) {
+func (s *AccrualService) UpdateOrdersStatus() {
 	//wp := workerpool.New(3)
 	var wg sync.WaitGroup
 	ordersChan := make(chan string, 10)
@@ -386,20 +391,25 @@ func (s *AccrualService) UpdateOrdersStatus(ordersChans chan string) {
 	reportTicker := time.NewTicker(time.Duration(1) * time.Second)
 	defer reportTicker.Stop()
 	s.GetStatusOrder(ordersChan, &wg)
-	wg.Add(3)
+	wg.Add(1)
 	go func() {
 		helpers.Infof("get order number stoped")
 		for range pollTicker.C {
 			s.GetStatusOrder(ordersChan, &wg)
+			log.Print(len(ordersChan), "lenth channel")
+			helpers.Infof(strconv.Itoa(cap(ordersChan)), "cap channel")
 			helpers.Infof("get order number stoped")
 		}
 		//close(ordersChan)
 		wg.Done()
 	}()
 
+	//defer close(ordersChan)
+
 	//}
 
-	//	wg.Add(1)
+	wg.Add(1)
+	//for i := 0; i < len(ordersChan); i++ {
 	go func() {
 		//defer close(ordersChan)
 		helpers.Infof("Received started")
@@ -440,6 +450,7 @@ func (s *AccrualService) UpdateOrdersStatus(ordersChans chan string) {
 		}
 	}()
 	//defer close(ordersChan)
+	//}
 	go startTask(ordersChan)
 	wg.Wait()
 	//	close(outCh)

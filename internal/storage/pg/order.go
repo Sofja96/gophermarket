@@ -83,15 +83,41 @@ func (pg *Postgres) UpdateOrder(orderNumber, status string, accrual float32) err
 	}
 	log.Print(userID)
 
+	var order models.Order
+	rows := tx.QueryRow(ctx, "SELECT number,status,accrual,uploaded_at,user_id FROM orders WHERE number = $1 FOR UPDATE SKIP LOCKED", orderNumber)
+	if err := rows.Scan(&order.Number, &order.Status, &order.Accrual, &order.UploadedAt, &userID); err != nil {
+		if err == pgx.ErrNoRows {
+			helpers.Infof("error scan values in orders: %w", err)
+			return fmt.Errorf("error scan values in orders: %w", err)
+		}
+		return err
+	}
+
+	if order.Status == models.PROCESSED || order.Status == models.INVALID {
+		return pgx.ErrNoRows
+	}
+	//var balance models.UserBalance
+	//row := pg.DB.QueryRow(ctx, "SELECT balance, withdrawn FROM users WHERE id = $1 FOR UPDATE SKIP LOCKED", userID)
+	//if err := row.Scan(&balance.Current, &balance.Withdrawn); err != nil {
+	//	if err == pgx.ErrNoRows {
+	//		helpers.Infof("error select balance in users: %w", err)
+	//		fmt.Errorf("error select balance in users: %w", err)
+	//	}
+	//	return err // Other error occurred
+	//}
+
+	helpers.Infof(orderNumber, "orderNumber before update")
 	_, err = tx.Exec(ctx, "UPDATE orders SET status = $1, accrual = $2 WHERE number = $3", status, accrual, orderNumber)
 	if err != nil {
-		log.Infof("error update values in orders")
+		helpers.Infof("error update values in orders", status, accrual, orderNumber)
+		//log.Infof("error update values in orders")
 		return fmt.Errorf("error update orders: %w", err)
 	}
 
-	_, err = tx.Exec(ctx, "UPDATE users SET balance = balance + $1 WHERE id = $2", accrual, userID)
+	_, err = tx.Exec(ctx, "UPDATE users SET balance = coalesce(balance, 0) + $1 WHERE id = $2", accrual, userID)
 	if err != nil {
-		log.Infof("error update values in users")
+		helpers.Infof("error update values in users", accrual, userID)
+		//	log.Infof("error update values in users")
 		return fmt.Errorf("error update users: %w", err)
 	}
 
@@ -102,6 +128,44 @@ func (pg *Postgres) UpdateOrder(orderNumber, status string, accrual float32) err
 
 	return nil
 }
+
+//func (pg *Postgres) UpdateOrder(orderNumber, status string, accrual float32) error {
+//	ctx := context.Background()
+//	tx, err := pg.DB.Begin(ctx)
+//	if err != nil {
+//		return err
+//	}
+//	defer func() { _ = tx.Rollback(ctx) }()
+//
+//	var userID uint
+//	row := tx.QueryRow(ctx, "SELECT user_id FROM orders WHERE number = $1", orderNumber)
+//	if err := row.Scan(&userID); err != nil {
+//		if err == pgx.ErrNoRows {
+//			return err // Order not found
+//		}
+//		return err // Other error occurred
+//	}
+//	log.Print(userID)
+//
+//	_, err = tx.Exec(ctx, "UPDATE orders SET status = $1, accrual = $2 WHERE number = $3", status, accrual, orderNumber)
+//	if err != nil {
+//		log.Infof("error update values in orders")
+//		return fmt.Errorf("error update orders: %w", err)
+//	}
+//
+//	_, err = tx.Exec(ctx, "UPDATE users SET balance = balance + $1 WHERE id = $2", accrual, userID)
+//	if err != nil {
+//		log.Infof("error update values in users")
+//		return fmt.Errorf("error update users: %w", err)
+//	}
+//
+//	err = tx.Commit(ctx)
+//	if err != nil {
+//		return err
+//	}
+//
+//	return nil
+//}
 
 func (pg *Postgres) GetOrders(user string) ([]models.Order, error) {
 	ctx := context.Background()
