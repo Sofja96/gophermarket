@@ -87,14 +87,14 @@ func (pg *Postgres) UpdateOrder(orderNumber, status string, accrual float32) err
 	helpers.Infof(orderNumber, "orderNumber before update")
 	_, err = tx.Exec(ctx, "UPDATE orders SET status = $1, accrual = $2 WHERE number = $3", status, accrual, orderNumber)
 	if err != nil {
-		helpers.Infof("error update values in orders %s", status, accrual, orderNumber)
+		//helpers.Infof("error update values in orders %s", status, accrual, orderNumber)
 		//log.Infof("error update values in orders")
 		return fmt.Errorf("error update orders: %w", err)
 	}
 
 	_, err = tx.Exec(ctx, "UPDATE users SET balance = coalesce(balance, 0) + $1 WHERE id = $2", accrual, userID)
 	if err != nil {
-		helpers.Infof("error update values in users %s", accrual, userID)
+		//helpers.Infof("error update values in users %f\n", accrual, userID)
 		return fmt.Errorf("error update users: %w", err)
 	}
 
