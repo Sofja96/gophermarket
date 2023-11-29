@@ -63,8 +63,7 @@ func (pg *Postgres) Getwithdrawals(user string) ([]models.UserWithdrawal, error)
 	if err != nil {
 		return withdrawals, fmt.Errorf("error get if from users: %w", err)
 	}
-	//ORDER BY
-	//			uploaded_at ASC
+
 	row, err := pg.DB.Query(ctx, "SELECT number,sum,processed_at FROM withdrawals WHERE user_id = $1 ORDER BY processed_at DESC", userID)
 	if err != nil {
 		return withdrawals, fmt.Errorf("error select values in withdrawals: %w", err)

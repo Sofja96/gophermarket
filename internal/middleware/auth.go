@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"fmt"
+	"github.com/Sofja96/gophermarket.git/internal/helpers"
 	"github.com/Sofja96/gophermarket.git/internal/models"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
@@ -71,7 +72,8 @@ func ValidateUser() echo.MiddlewareFunc {
 			//if token == "" {
 			//	//return c.JSON(http.StatusUnauthorized, "You must be logged in to access this resource")
 			//}
-			log.Println(token, "header")
+			//log.Println(token, "header")
+			helpers.Infof(token, "header")
 
 			//user, err := VerifyToken("Bearer" + token)
 			log.Println(token, "token")

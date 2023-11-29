@@ -6,7 +6,7 @@ const (
 	ContextKeyUser = "login"
 )
 
-type OrderStatus string
+type OrderStatus = string
 
 const (
 	NEW        OrderStatus = "NEW"

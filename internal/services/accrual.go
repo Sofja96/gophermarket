@@ -3,11 +3,14 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Sofja96/gophermarket.git/internal/helpers"
 	"github.com/Sofja96/gophermarket.git/internal/models"
 	"github.com/Sofja96/gophermarket.git/internal/storage/pg"
+	"sync"
+
+	//"github.com/gammazero/workerpool"
 	"github.com/labstack/gommon/log"
 	"net/http"
-	"sync"
 	"time"
 )
 
@@ -21,6 +24,7 @@ func NewAccrualService(addr string, storage *pg.Postgres) *AccrualService {
 }
 
 func (s *AccrualService) GetStatusAccrual(orderNumber string) (models.OrderAccrual, error) {
+	//defer wg.Done()
 	var orderAccrual models.OrderAccrual
 	url := fmt.Sprintf("%s/api/orders/%s", s.addr, orderNumber)
 
@@ -64,38 +68,234 @@ func (s *AccrualService) GetStatusAccrual(orderNumber string) (models.OrderAccru
 	return orderAccrual, nil
 }
 
-func (s *AccrualService) CheckOrderStatus(ordersChan chan string) {
-	var wg sync.WaitGroup
+func (s *AccrualService) GetStatusOrder(outCh chan<- string) chan<- string {
+	//outCh := make(chan string, 10)
+	//defer wg.Done()
+	//defer close(outCh)
+	statusOrder, err := s.store.GetOrderStatus([]string{models.NEW})
+	if err != nil {
+		log.Errorf("failed get order by statused: %w", err)
+	}
+	//helpers.Infof("Sent:", statusOrder)
+	//outCh <- statusOrder
+	//statusOrder, err = s.store.GetOrderStatus([]string{models.PROCESSED)
+	//if err != nil {
+	//	log.Errorf("failed get order by statused: %w", err)
+	//}
+	//log.Print(statusOrder, "func GetStatusOrder")
+	for _, order := range statusOrder {
+		helpers.Infof("Sent:", order)
+		outCh <- order
+	}
+	//wg.Done()
+	//	close(outCh)
+
+	//log.Print(<-outCh)
+	return outCh
+}
+
+func (s *AccrualService) UpdateOrderStatus() {
+	//var wg sync.WaitGroup
+	ordersChan := make(chan string, 10)
+	//defer close(ordersChan)
 	outCh := make(chan models.OrderAccrual, 10)
+	ticker := time.NewTicker(time.Duration(1) * time.Second)
+	defer ticker.Stop()
+	//wg.Add(2)
+	go func() {
+		s.GetStatusOrder(ordersChan)
+		for range ticker.C {
+			for {
+				select {
+				case <-ordersChan:
+					//close(ordersChan)
+					return
+				default:
+					helpers.Infof("get order number started")
+					//wg.Add(1)
+					s.GetStatusOrder(ordersChan)
+					//wg.Done()
+					helpers.Infof("get order number stoped")
+				}
+			}
+
+		}
+		//wg.Done()
+	}()
+	//wg.Add(1)
+	go func() {
+		for range ticker.C {
+			for {
+				select {
+				case <-outCh:
+					//	close(outCh)
+					return
+				default:
+					//if order, ok := <-ordersChan; ok {
+					//	if !ok {
+					//		break
+					//	}
+					for order := range ordersChan {
+						helpers.Infof("Received:", order)
+						resp, err := s.GetStatusAccrual(order)
+						if err != nil {
+							log.Infof("submit order: CalcOrderAccrual: %v", err)
+							return
+						}
+						helpers.Infof("Received started")
+						helpers.Infof(order, "order number")
+						log.Print(resp, "resp")
+						outCh <- resp
+					}
+
+				}
+			}
+		}
+		//wg.Done()
+	}()
+	//go func() {
+	//	wg.Wait()
+	//	defer close(ordersChan)
+	//	//defer close(outCh)
+	//}()
+	//wg.Wait()
+	go func() {
+		for {
+			select {
+			case <-outCh:
+				close(ordersChan)
+				//close(outCh)
+				return
+			default:
+				for order := range outCh {
+					helpers.Infof("START UPDATER")
+					log.Infof(order.Order, "responce order")
+					if order.Status == models.PROCESSED || order.Status == models.INVALID {
+						log.Print(order.Status, "order.status")
+						log.Print(order.Accrual, "accrual for begin update order")
+						err := s.store.UpdateOrder(order.Order, order.Status, order.Accrual)
+						if err != nil {
+							log.Print("error update order", err)
+							return
+						}
+						log.Info(order.Accrual, "accrual after update")
+						//close(a.OrdersChan)
+
+					}
+					if order.Status == models.PROCESSING || order.Status == models.REGISTERED {
+						log.Print(order.Status, "order.status")
+						err := s.store.UpdateOrderStatus(order.Order, order.Status)
+						if err != nil {
+							log.Print("error update order", err)
+							return
+						}
+						//close(a.OrdersChan)
+
+					}
+				}
+
+			}
+		}
+	}()
+	//	go startTask(ordersChan)
+
+}
+
+func (s *AccrualService) CheckOrderStatus() {
+	//wp := workerpool.New(3)
+	var wg sync.WaitGroup
+	ordersChan := make(chan string, 10)
+	//defer close(ordersChan)
+	outCh := make(chan models.OrderAccrual, 10)
+	//defer close(outCh)
+	//ticker := time.NewTicker(5 * time.Second)
+	//defer ticker.Stop()
+	pollTicker := time.NewTicker(time.Duration(1) * time.Second)
+	defer pollTicker.Stop()
+	reportTicker := time.NewTicker(time.Duration(1) * time.Second)
+	defer reportTicker.Stop()
+	//wg.Add(1)
+	//go s.GetStatusOrder(ordersChan, &wg)
+	//go func() {
+	//	helpers.Infof("get order number started")
+	//	for range pollTicker.C {
+	//		statusOrder, err := s.store.GetOrderStatus([]string{models.NEW})
+	//		if err != nil {
+	//			log.Errorf("failed get order by statused: %w", err)
+	//		}
+	//		//statusOrder, err = s.store.GetOrderStatus([]string{models.PROCESSED)
+	//		//if err != nil {
+	//		//	log.Errorf("failed get order by statused: %w", err)
+	//		//}
+	//		log.Print(statusOrder, "func GetStatusOrder")
+	//		for _, order := range statusOrder {
+	//			helpers.Infof("Sent:", order)
+	//			ordersChan <- order
+	//		}
+	//		//s.GetStatusOrder(ordersChan)
+	//		helpers.Infof("get order number stoped")
+	//	}
+	//	//close(ordersChan)
+	//	//wg.Done()
+	//	//wp.StopWait()
+	//	//wp.StopWait()
+	//
+	//}()
+
+	//ctx := context.Background()
+	//ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
+	//defer cancel()
+
+	//ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	//defer cancel ()
+	//err := uh.storage.UpdateOrderStatus(order.ID, models.PROCESSING)
+	//if err != nil {
+	//	log.Println("update order status: %v", err)
+	//}
+	//wg.Add(1)
+	go func() {
+		//for range pollTicker.C {
+		//statusOrder, err := s.store.GetOrderStatus([]string{models.NEW})
+		//if err != nil {
+		//	log.Errorf("failed get order by statused: %w", err)
+		//}
+		////statusOrder, err = s.store.GetOrderStatus([]string{models.PROCESSED)
+		////if err != nil {
+		////	log.Errorf("failed get order by statused: %w", err)
+		////}
+		//log.Print(statusOrder, "func GetStatusOrder")
+		//for _, order := range statusOrder {
+		//	helpers.Infof("Sent:", order)
+		//	ordersChan <- order
+		//}
+		s.GetStatusOrder(ordersChan)
+		helpers.Infof("get order number stoped")
+		//close(ordersChan)
+		//	}
+		//	wg.Done()
+	}()
+
 	wg.Add(1)
 	go func() {
-		ticker := time.NewTicker(1 * time.Second)
-		defer ticker.Stop()
-		//ctx := context.Background()
-		//ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
-		//defer cancel()
-
-		//ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
-		//defer cancel ()
-		//err := uh.storage.UpdateOrderStatus(order.ID, models.PROCESSING)
-		//if err != nil {
-		//	log.Println("update order status: %v", err)
-		//}
-		for range ticker.C {
+		//defer close(ordersChan)
+		helpers.Infof("Received started")
+		for range reportTicker.C {
+			//if order, ok := <-ordersChan; ok {
 			for order := range ordersChan {
+				helpers.Infof("Received:", order)
 				resp, err := s.GetStatusAccrual(order)
 				if err != nil {
 					log.Infof("submit order: CalcOrderAccrual: %v", err)
 					return
 				}
-
-				if resp.Status != string(models.PROCESSED) {
-					time.AfterFunc(2*time.Second, func() {
-						ordersChan <- order
-					})
-					return
-				}
-				log.Infof(order, "order number")
+				//
+				//if resp.Status != string(models.PROCESSED) {
+				//	time.AfterFunc(2*time.Second, func() {
+				//		ordersChan <- order
+				//	})
+				//	return
+				//}
+				helpers.Infof(order, "order number")
 				log.Print(resp, "resp")
 				outCh <- resp
 				//if resp.Status != string(models.PROCESSED) {
@@ -130,33 +330,16 @@ func (s *AccrualService) CheckOrderStatus(ordersChan chan string) {
 			}
 		}
 		wg.Done()
-
 	}()
-	//wg.Add(1)
-	//go func() {
-	//	ticker := time.NewTicker(time.Duration(1) * time.Second)
-	//	defer ticker.Stop()
-	//	newOrders, err := a.store.GetOrderStatus(models.NEW)
-	//	if err != nil {
-	//		if err != nil {
-	//			log.Println("error get status order", err)
-	//
-	//		}
-	//		for range ticker.C {
-	//			//	var ordernum models.OrderAccrual
-	//			//var ordernum string
-	//			for _, ordernum := range newOrders {
-	//				outCh <- ordernum
-	//			}
-	//		}
-	//	}
-	//	wg.Done()
-	//}()
-	wg.Add(1)
+	//go startTask(ordersChan)
+	//go startTask1(outCh)
+
+	//wg.Wait()
 	go func() {
 		for order := range outCh {
-			log.Print(order.Order, "resp.order")
-			if order.Status == string(models.PROCESSED) || order.Status == string(models.INVALID) {
+			helpers.Infof("START UPDATER")
+			log.Infof(order.Order, "responce order")
+			if order.Status == models.PROCESSED || order.Status == models.INVALID {
 				log.Print(order.Status, "order.status")
 				log.Print(order.Accrual, "accrual for begin update order")
 				err := s.store.UpdateOrder(order.Order, order.Status, order.Accrual)
@@ -164,13 +347,13 @@ func (s *AccrualService) CheckOrderStatus(ordersChan chan string) {
 					log.Print("error update order", err)
 					return
 				}
-				log.Print(order.Accrual, "accrual after update")
+				log.Info(order.Accrual, "accrual after update")
 				//close(a.OrdersChan)
 
 			}
-			if order.Status == string(models.PROCESSING) || order.Status == string(models.REGISTERED) {
+			if order.Status == models.PROCESSING || order.Status == models.REGISTERED {
 				log.Print(order.Status, "order.status")
-				err := s.store.UpdateOrderStatus(order.Order, models.OrderStatus(order.Status))
+				err := s.store.UpdateOrderStatus(order.Order, order.Status)
 				if err != nil {
 					log.Print("error update order", err)
 					return
@@ -179,9 +362,97 @@ func (s *AccrualService) CheckOrderStatus(ordersChan chan string) {
 
 			}
 		}
+		close(ordersChan)
+		close(outCh)
 		wg.Done()
 	}()
-	//	return outCh
-	//go startTask(ordersChan)
-	//wg.Wait()
+	wg.Wait()
+	//	close(outCh)
+}
+
+//	wp.StopWait()
+//	wg.Done()
+//
+//}()
+//wg.Add(1)
+//go func() {
+//	ticker := time.NewTicker(time.Duration(1) * time.Second)
+//	defer ticker.Stop()
+//	newOrders, err := a.store.GetOrderStatus(models.NEW)
+//	if err != nil {
+//		if err != nil {
+//			log.Println("error get status order", err)
+//
+//		}
+//		for range ticker.C {
+//			//	var ordernum models.OrderAccrual
+//			//var ordernum string
+//			for _, ordernum := range newOrders {
+//				outCh <- ordernum
+//			}
+//		}
+//	}
+
+//wg.Add(1)
+
+//defer close(outCh)
+
+//go func() {
+//	//if order, ok := <-outCh; ok {
+//	for order := range outCh {
+//		log.Print(order.Order, "resp.order")
+//		if order.Status == models.PROCESSED || order.Status == models.INVALID {
+//			log.Print(order.Status, "order.status")
+//			log.Print(order.Accrual, "accrual for begin update order")
+//			err := s.store.UpdateOrder(order.Order, order.Status, order.Accrual)
+//			if err != nil {
+//				log.Print("error update order", err)
+//				return
+//			}
+//			log.Print(order.Accrual, "accrual after update")
+//			//close(a.OrdersChan)
+//
+//		}
+//		if order.Status == models.PROCESSING || order.Status == models.REGISTERED {
+//			log.Print(order.Status, "order.status")
+//			err := s.store.UpdateOrderStatus(order.Order, order.Status)
+//			if err != nil {
+//				log.Print("error update order", err)
+//				return
+//			}
+//			//close(a.OrdersChan)
+//
+//		}
+//	}
+//	//	}
+//	//wg.Done()
+//}()
+//	return outCh
+//defer close(ordersChan)
+//defer close(outCh)
+//}
+
+func startTask(taskChan chan string) {
+	for {
+		select {
+		case <-taskChan:
+			//close(taskChan)
+			return
+		default:
+			break
+			//	log.Println("Задача выполняется...")
+		}
+	}
+}
+
+func startTask1(taskChan chan models.OrderAccrual) {
+	for {
+		select {
+		case <-taskChan:
+			return
+		default:
+			break
+			//	log.Println("Задача выполняется...")
+		}
+	}
 }

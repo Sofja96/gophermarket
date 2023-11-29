@@ -25,7 +25,7 @@ func NewUserHandler(storage *pg.Postgres, as *services.AccrualService) *UserHand
 }
 
 // канал для отправки данных о номере заказа
-func PostOrder(storage *pg.Postgres, ordersChan chan<- string) echo.HandlerFunc {
+func PostOrder(storage *pg.Postgres) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		if c.Request().Header.Get("Content-Type") != "text/plain" {
 			return c.String(http.StatusUnsupportedMediaType, "")
@@ -64,15 +64,15 @@ func PostOrder(storage *pg.Postgres, ordersChan chan<- string) echo.HandlerFunc 
 			//	return c.String(http.StatusInternalServerError, "Something went wrong")
 			//
 			//}
-			//if errors.Is(err, helpers.ErrAnotherUserOrder) {
-			//	return c.String(http.StatusConflict, "order number already exists for another user")
-			//}
+			if errors.Is(err, helpers.ErrAnotherUserOrder) {
+				return c.String(http.StatusConflict, "order number already exists for another user")
+			}
 			if errors.Is(err, helpers.ErrExistsOrder) {
 				return c.String(http.StatusOK, "order number already exists")
 			}
 			return c.String(http.StatusInternalServerError, "Something went wrong")
 		}
-		ordersChan <- orderNumber
+		//ordersChan <- orderNumber
 		//val := <-ordersChan
 		//println(val)
 		log.Println(orderNumber, username, "order+user in create")

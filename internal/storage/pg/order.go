@@ -7,6 +7,7 @@ import (
 	"github.com/Sofja96/gophermarket.git/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/labstack/gommon/log"
+	"strings"
 	"time"
 )
 
@@ -228,38 +229,27 @@ func (pg *Postgres) UpdateOrderStatus(orderNumber string, status models.OrderSta
 	return nil
 }
 
-func (pg *Postgres) GetOrderStatus(status models.OrderStatus) (string, error) {
+func (pg *Postgres) GetOrderStatus(status []string) ([]string, error) {
 	ctx := context.Background()
-	//cctx, cancel := context.WithTimeout(ctx, 120*time.Second)
-	//defer cancel()
-	tx, err := pg.DB.Begin(ctx)
-	if err != nil {
-		return "", err
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
+	orders := make([]string, 0)
+	statuses := strings.Join(status, ",")
 
-	//err = pg.LockOrders(ctx, strconv.Itoa(int(orderID)))
-	//if err != nil {
-	//	_ = tx.Rollback(ctx)
-	//	return err
-	//}
-	var order string
-	row := tx.QueryRow(ctx, "SELECT number FROM orders where staus = $1", status)
-	if err := row.Scan(&order); err != nil {
-		if err == pgx.ErrNoRows {
-			return order, err // Order not found
+	row, err := pg.DB.Query(ctx, "SELECT number FROM orders where status IN ($1)", statuses)
+	if err != nil {
+		return orders, fmt.Errorf("error select status in orders: %w", err)
+	}
+	defer row.Close()
+
+	for row.Next() {
+		var order string
+		err := row.Scan(&order)
+		if err != nil {
+			return orders, fmt.Errorf("error scan values: %w", err)
 		}
-		return "", err // Other error occurred
-	}
-	log.Print(order)
-
-	err = tx.Commit(ctx)
-	if err != nil {
-		_ = tx.Rollback(ctx)
-		return "", err
+		orders = append(orders, order)
 	}
 
-	return order, nil
+	return orders, nil
 }
 
 func (pg *Postgres) UpdateOrderAccrualAndUserBalance(ctx context.Context, order string, userID string, accrualResp models.OrderAccrual) error {

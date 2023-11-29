@@ -4,8 +4,8 @@ import (
 	"context"
 	"github.com/Sofja96/gophermarket.git/internal/app/config"
 	"github.com/Sofja96/gophermarket.git/internal/handlers"
+	"github.com/Sofja96/gophermarket.git/internal/helpers"
 	"github.com/Sofja96/gophermarket.git/internal/middleware"
-	"github.com/Sofja96/gophermarket.git/internal/models"
 	"github.com/Sofja96/gophermarket.git/internal/services"
 	"github.com/Sofja96/gophermarket.git/internal/storage/pg"
 	"github.com/labstack/echo/v4"
@@ -13,7 +13,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"sync"
 	"time"
 )
 
@@ -23,7 +22,7 @@ type APIServer struct {
 	logger         zap.SugaredLogger
 	accrualService *services.AccrualService
 	store          *pg.Postgres
-	//	OrdersChan     chan string
+	OrdersChan     chan string
 }
 
 func New(ctx context.Context) *APIServer {
@@ -31,11 +30,12 @@ func New(ctx context.Context) *APIServer {
 	a := &APIServer{}
 	c := config.LoadConfig()
 	config.ParseFlags(c)
+	helpers.NewLogger()
 
 	a.address = c.Address
 	a.echo = echo.New()
-	var wg sync.WaitGroup
-	orderchan := make(chan string)
+	//var wg sync.WaitGroup
+	//orderchan := make(chan string)
 	//var store storage.Storage
 	a.store, err = pg.NewStorage(ctx, c.DatabaseDSN)
 	if err != nil {
@@ -55,7 +55,10 @@ func New(ctx context.Context) *APIServer {
 	a.logger = *logger.Sugar()
 	a.echo.Use(middleware.WithLogging(a.logger))
 
-	a.accrualService.CheckOrderStatus(orderchan)
+	//a.accrualService.UpdateOrderStatus()
+
+	go a.accrualService.CheckOrderStatus()
+	//	a.accrualService.GetStatusOrder()
 
 	//	a.checkOrderStatus(orderchan)
 
@@ -65,7 +68,7 @@ func New(ctx context.Context) *APIServer {
 		group.POST("/login", handlers.LoginUser(a.store))
 		group.Use(middleware.ValidateUser())
 		{
-			group.POST("/orders", handlers.PostOrder(a.store, orderchan))
+			group.POST("/orders", handlers.PostOrder(a.store))
 			group.GET("/orders", handlers.GetOrders(a.store))
 			group.GET("/balance", handlers.GetBalance(a.store))
 			group.POST("/balance/withdraw", handlers.WithdrawBalance(a.store))
@@ -86,8 +89,8 @@ func New(ctx context.Context) *APIServer {
 	//a.echo.GET("/value/:typeM/:nameM", ValueMetric(store))
 	//a.echo.POST("/update/:typeM/:nameM/:valueM", Webhook(store))
 	//a.echo.GET("/ping", Ping(store))
-	go startTask(orderchan)
-	wg.Wait()
+	//go startTask(a.OrdersChan)
+	//wg.Wait()
 	return a
 }
 
@@ -213,71 +216,70 @@ func New(ctx context.Context) *APIServer {
 //	//wg.Wait()
 //}
 
-func (a *APIServer) UpdateStatusandBalace(ordersChan <-chan string) {
-	var wg sync.WaitGroup
-	outCh := make(chan models.OrderAccrual, 10)
-	wg.Add(1)
-	go func() {
-		ticker := time.NewTicker(1 * time.Second)
-		defer ticker.Stop()
-		//ctx := context.Background()
-		//ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
-		//defer cancel()
-
-		//ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
-		//defer cancel ()
-		//err := uh.storage.UpdateOrderStatus(order.ID, models.PROCESSING)
-		//if err != nil {
-		//	log.Println("update order status: %v", err)
-		//}
-		for range ticker.C {
-			for order := range ordersChan {
-				resp, err := a.accrualService.GetStatusAccrual(order)
-				if err != nil {
-					log.Println("submit order: CalcOrderAccrual: %v", err)
-					log.Println(order, "order in go func")
-					return
-				}
-
-				log.Println(order, "order number")
-				log.Println(resp, "resp")
-				//if resp.Status != string(models.PROCESSED) {
-				//	time.AfterFunc(5*time.Second, func() {
-				//		//ordersChan <- order
-				//	})
-				//	return
-				//}
-				log.Println(resp.Order, "resp.order")
-				if resp.Status == string(models.PROCESSED) {
-					log.Println(order, "processed")
-					//close(a.OrdersChan)
-
-				}
-				outCh <- resp
-				//close(a.OrdersChan)
-				//close(a.OrdersChan)
-				//	a.OrdersChan <- order
-				//err = uh.storage.UpdateOrderAccrualAndUserBalance(ctx, order.ID, userID, resp)
-				//if err != nil {
-				//	log.Println("submit order: UpdateOrderAccrualAndUserBalance: %v", err)
-				//	return
-				//}
-				//err = uh.storage.UpdateOrderStatus(ctx, order.ID, models.PROCESSED)
-				//if err != nil {
-				//	log.Println("update order status: %v", err)
-				//}
-				//	}
-
-			}
-		}
-		wg.Done()
-
-	}()
-	//	return outCh
-	//go startTask(ordersChan)
-	//wg.Wait()
-}
-
+//	func (a *APIServer) UpdateStatusandBalace(ordersChan <-chan string) {
+//		var wg sync.WaitGroup
+//		outCh := make(chan models.OrderAccrual, 10)
+//		wg.Add(1)
+//		go func() {
+//			ticker := time.NewTicker(1 * time.Second)
+//			defer ticker.Stop()
+//			//ctx := context.Background()
+//			//ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
+//			//defer cancel()
+//
+//			//ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+//			//defer cancel ()
+//			//err := uh.storage.UpdateOrderStatus(order.ID, models.PROCESSING)
+//			//if err != nil {
+//			//	log.Println("update order status: %v", err)
+//			//}
+//			for range ticker.C {
+//				for order := range ordersChan {
+//					resp, err := a.accrualService.GetStatusAccrual(order)
+//					if err != nil {
+//						log.Println("submit order: CalcOrderAccrual: %v", err)
+//						log.Println(order, "order in go func")
+//						return
+//					}
+//
+//					log.Println(order, "order number")
+//					log.Println(resp, "resp")
+//					//if resp.Status != string(models.PROCESSED) {
+//					//	time.AfterFunc(5*time.Second, func() {
+//					//		//ordersChan <- order
+//					//	})
+//					//	return
+//					//}
+//					log.Println(resp.Order, "resp.order")
+//					if resp.Status == string(models.PROCESSED) {
+//						log.Println(order, "processed")
+//						//close(a.OrdersChan)
+//
+//					}
+//					outCh <- resp
+//					//close(a.OrdersChan)
+//					//close(a.OrdersChan)
+//					//	a.OrdersChan <- order
+//					//err = uh.storage.UpdateOrderAccrualAndUserBalance(ctx, order.ID, userID, resp)
+//					//if err != nil {
+//					//	log.Println("submit order: UpdateOrderAccrualAndUserBalance: %v", err)
+//					//	return
+//					//}
+//					//err = uh.storage.UpdateOrderStatus(ctx, order.ID, models.PROCESSED)
+//					//if err != nil {
+//					//	log.Println("update order status: %v", err)
+//					//}
+//					//	}
+//
+//				}
+//			}
+//			wg.Done()
+//
+//		}()
+//		//	return outCh
+//		//go startTask(ordersChan)
+//		//wg.Wait()
+//	}
 func startTask(taskChan chan string) {
 	for {
 		select {
@@ -295,7 +297,8 @@ func (a *APIServer) Start() error {
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Println("Running server on", a.address)
+		helpers.Infof("starting the GopherMart server...", a.address)
+		//log.Println("Running server on", a.address)
 	}()
 
 	quit := make(chan os.Signal, 1)

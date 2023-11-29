@@ -3,16 +3,19 @@ module github.com/Sofja96/gophermarket.git
 go 1.21
 
 require (
+	github.com/gammazero/workerpool v1.1.3
 	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/golang-migrate/migrate/v4 v4.16.2
 	github.com/jackc/pgx/v5 v5.5.0
 	github.com/labstack/echo/v4 v4.11.3
 	github.com/labstack/gommon v0.4.0
+	github.com/rs/zerolog v1.31.0
 	go.uber.org/zap v1.26.0
 	golang.org/x/crypto v0.14.0
 )
 
 require (
+	github.com/gammazero/deque v0.2.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
