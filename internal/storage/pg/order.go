@@ -25,7 +25,7 @@ func (pg *Postgres) CreateOrder(orderNumber, user string) (*models.Order, error)
 	if err != nil {
 		return nil, fmt.Errorf("error get id from users: %w", err)
 	}
-	log.Print(userID)
+
 	var orderUserID string
 	row := tx.QueryRow(cctx, "SELECT user_id FROM orders WHERE number = $1", orderNumber)
 	if err := row.Scan(&orderUserID); err == nil {
@@ -81,7 +81,6 @@ func (pg *Postgres) UpdateOrder(orderNumber, status string, accrual float32) err
 		return pgx.ErrNoRows
 	}
 
-	helpers.Infof(orderNumber, "orderNumber before update")
 	_, err = tx.Exec(ctx, "UPDATE orders SET status = $1, accrual = $2 WHERE number = $3", status, accrual, orderNumber)
 	if err != nil {
 		return fmt.Errorf("error update orders: %w", err)

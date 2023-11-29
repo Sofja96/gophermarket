@@ -4,7 +4,9 @@ import (
 	"embed"
 	"fmt"
 	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
+	_ "github.com/labstack/gommon/log"
 )
 
 //go:embed migrations/*.sql
@@ -18,13 +20,12 @@ func migrateDatabase(dsn string) error {
 
 	m, err := migrate.NewWithSourceInstance("iofs", d, dsn)
 	if err != nil {
-		return fmt.Errorf("error on creating migration: %w", err)
+		return fmt.Errorf("error creaate migrate: %w", err)
 	}
 
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		return fmt.Errorf("error on making migration: %w", err)
+		return fmt.Errorf("error migrate: %w", err)
 	}
 
 	return nil
-
 }
