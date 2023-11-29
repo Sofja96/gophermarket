@@ -6,11 +6,8 @@ import (
 	"github.com/Sofja96/gophermarket.git/internal/helpers"
 	"github.com/Sofja96/gophermarket.git/internal/models"
 	"github.com/Sofja96/gophermarket.git/internal/storage/pg"
-	"sync"
-
-	//"github.com/gammazero/workerpool"
-	"github.com/labstack/gommon/log"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -115,7 +112,6 @@ func (s *AccrualService) UpdateOrdersStatus() {
 						helpers.Error("error update OrderAccrual: %s", err)
 						return
 					}
-					log.Info(resp.Accrual, " accrual after update")
 				}
 
 			}

@@ -7,7 +7,6 @@ import (
 	"github.com/Sofja96/gophermarket.git/internal/models"
 	"github.com/Sofja96/gophermarket.git/internal/storage/pg"
 	"github.com/labstack/echo/v4"
-	"log"
 	"net/http"
 )
 
@@ -40,7 +39,7 @@ func RegisterUser(storage *pg.Postgres) echo.HandlerFunc {
 
 		token, err := middleware.CreateToken(newUser.Login)
 		if err != nil {
-			log.Println("error create token")
+			helpers.Error("error create token")
 			return err
 		}
 		var bearer = "Bearer " + token
@@ -78,7 +77,7 @@ func LoginUser(storage *pg.Postgres) echo.HandlerFunc {
 		}
 		token, err := middleware.CreateToken(newUser.Login)
 		if err != nil {
-			log.Println("error create token")
+			helpers.Error("error create token")
 			return err
 		}
 		var bearer = "Bearer " + token

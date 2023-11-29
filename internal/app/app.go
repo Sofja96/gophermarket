@@ -37,8 +37,6 @@ func New(ctx context.Context) *APIServer {
 	if err != nil {
 		helpers.Error("error creation storage: %s", err)
 	}
-	//TODO delete log
-	helpers.Debug(c.DatabaseDSN)
 
 	logger, _ := zap.NewDevelopment()
 	defer logger.Sync()

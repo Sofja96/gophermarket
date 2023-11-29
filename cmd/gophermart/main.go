@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"github.com/Sofja96/gophermarket.git/internal/app"
-	"log"
+	"github.com/Sofja96/gophermarket.git/internal/helpers"
 	"os/signal"
 	"syscall"
 )
@@ -13,6 +13,6 @@ func main() {
 	defer cancel()
 	s := app.New(ctx)
 	if err := s.Start(); err != nil {
-		log.Fatal(err)
+		helpers.Fatal("error start service GopherMart %s", err)
 	}
 }

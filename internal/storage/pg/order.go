@@ -6,7 +6,6 @@ import (
 	"github.com/Sofja96/gophermarket.git/internal/helpers"
 	"github.com/Sofja96/gophermarket.git/internal/models"
 	"github.com/jackc/pgx/v5"
-	"github.com/labstack/gommon/log"
 	"strings"
 	"time"
 )
@@ -66,7 +65,6 @@ func (pg *Postgres) UpdateOrder(orderNumber, status string, accrual float32) err
 		}
 		return err
 	}
-	log.Print(userID)
 
 	var order models.Order
 	rows := tx.QueryRow(ctx, "SELECT number,status,accrual,uploaded_at,user_id FROM orders WHERE number = $1 FOR UPDATE SKIP LOCKED", orderNumber)
