@@ -68,11 +68,11 @@ func (s *AccrualService) GetStatusAccrual(orderNumber string, wg *sync.WaitGroup
 func (s *AccrualService) GetStatusOrder(outCh chan<- string, wg *sync.WaitGroup) {
 	statusOrderNew, err := s.store.GetOrderStatus([]string{models.NEW})
 	if err != nil {
-		helpers.Error("failed get order by status: %w", err)
+		helpers.Error("failed get order by status: %s", err)
 	}
 	statusOrderProc, err := s.store.GetOrderStatus([]string{models.PROCESSING})
 	if err != nil {
-		helpers.Error("failed get order by status: %w", err)
+		helpers.Error("failed get order by status: %s", err)
 	}
 
 	for _, order := range statusOrderNew {
@@ -112,7 +112,7 @@ func (s *AccrualService) UpdateOrdersStatus() {
 				if resp.Status == models.PROCESSED || resp.Status == models.INVALID {
 					err := s.store.UpdateOrder(resp.Order, resp.Status, resp.Accrual)
 					if err != nil {
-						helpers.Error("error update OrderAccrual", err)
+						helpers.Error("error update OrderAccrual: %s", err)
 						return
 					}
 					log.Info(resp.Accrual, " accrual after update")

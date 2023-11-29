@@ -35,7 +35,7 @@ func New(ctx context.Context) *APIServer {
 	a.echo = echo.New()
 	a.store, err = pg.NewStorage(ctx, c.DatabaseDSN)
 	if err != nil {
-		helpers.Error("error creation storage: %w", err)
+		helpers.Error("error creation storage: %s", err)
 	}
 	//TODO delete log
 	helpers.Debug(c.DatabaseDSN)
