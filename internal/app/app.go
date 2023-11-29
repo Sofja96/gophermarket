@@ -57,7 +57,8 @@ func New(ctx context.Context) *APIServer {
 
 	//a.accrualService.UpdateOrderStatus()
 
-	go a.accrualService.CheckOrderStatus()
+	//go a.accrualService.CheckOrderStatus()
+	go a.accrualService.UpdateOrdersStatus(a.OrdersChan)
 	//	a.accrualService.GetStatusOrder()
 
 	//	a.checkOrderStatus(orderchan)
@@ -68,7 +69,7 @@ func New(ctx context.Context) *APIServer {
 		group.POST("/login", handlers.LoginUser(a.store))
 		group.Use(middleware.ValidateUser())
 		{
-			group.POST("/orders", handlers.PostOrder(a.store))
+			group.POST("/orders", handlers.PostOrder(a.store, a.OrdersChan))
 			group.GET("/orders", handlers.GetOrders(a.store))
 			group.GET("/balance", handlers.GetBalance(a.store))
 			group.POST("/balance/withdraw", handlers.WithdrawBalance(a.store))

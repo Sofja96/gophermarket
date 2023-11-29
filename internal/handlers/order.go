@@ -25,7 +25,7 @@ func NewUserHandler(storage *pg.Postgres, as *services.AccrualService) *UserHand
 }
 
 // канал для отправки данных о номере заказа
-func PostOrder(storage *pg.Postgres) echo.HandlerFunc {
+func PostOrder(storage *pg.Postgres, ordersChan chan<- string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		if c.Request().Header.Get("Content-Type") != "text/plain" {
 			return c.String(http.StatusUnsupportedMediaType, "")
@@ -72,7 +72,7 @@ func PostOrder(storage *pg.Postgres) echo.HandlerFunc {
 			}
 			return c.String(http.StatusInternalServerError, "Something went wrong")
 		}
-		//ordersChan <- orderNumber
+		ordersChan <- orderNumber
 		//val := <-ordersChan
 		//println(val)
 		log.Println(orderNumber, username, "order+user in create")
@@ -125,12 +125,12 @@ func (uh *UserHandler) calcAndApplyAccrual(order *models.Order, userID string) {
 		//	log.Println("update order status: %v", err)
 		//}
 		//	for range ticker.C {
-		resp, err := uh.accrualService.GetStatusAccrual(order.Number)
-		if err != nil {
-			log.Println("submit order: CalcOrderAccrual: %v", err)
-			return
-		}
-		log.Println(resp, "resp")
+		//resp, err := uh.accrualService.GetStatusAccrual(order.Number)
+		//if err != nil {
+		//	log.Println("submit order: CalcOrderAccrual: %v", err)
+		//	return
+		//}
+		//log.Println(resp, "resp")
 		//err = uh.storage.UpdateOrderAccrualAndUserBalance(ctx, order.ID, userID, resp)
 		//if err != nil {
 		//	log.Println("submit order: UpdateOrderAccrualAndUserBalance: %v", err)
