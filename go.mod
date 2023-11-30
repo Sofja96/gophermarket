@@ -3,7 +3,6 @@ module github.com/Sofja96/gophermarket.git
 go 1.21
 
 require (
-	github.com/gammazero/workerpool v1.1.3
 	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/golang-migrate/migrate/v4 v4.16.2
 	github.com/jackc/pgx/v5 v5.5.0

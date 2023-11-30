@@ -45,7 +45,7 @@ func New(ctx context.Context) *APIServer {
 	a.echo.Use(middleware.WithLogging(a.logger))
 	a.echo.Use(middleware.GzipMiddleware())
 
-	go a.accrualService.UpdateOrdersStatus()
+	go a.accrualService.UpdateOrdersStatus(ctx)
 
 	group := a.echo.Group("api/user")
 	{

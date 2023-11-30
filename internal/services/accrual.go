@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/Sofja96/gophermarket.git/internal/helpers"
@@ -62,7 +63,7 @@ func (s *AccrualService) GetStatusAccrual(orderNumber string, wg *sync.WaitGroup
 	return orderAccrual, nil
 }
 
-func (s *AccrualService) GetStatusOrder(outCh chan<- string, wg *sync.WaitGroup) {
+func (s *AccrualService) GetStatusOrder(outCh chan<- string) {
 	statusOrderNew, err := s.store.GetOrderStatus([]string{models.NEW})
 	if err != nil {
 		helpers.Error("failed get order by status: %s", err)
@@ -80,7 +81,7 @@ func (s *AccrualService) GetStatusOrder(outCh chan<- string, wg *sync.WaitGroup)
 	}
 }
 
-func (s *AccrualService) UpdateOrdersStatus() {
+func (s *AccrualService) UpdateOrdersStatus(ctx context.Context) {
 	var wg sync.WaitGroup
 	ordersChan := make(chan string, 10)
 	pollTicker := time.NewTicker(time.Duration(1) * time.Second)
@@ -88,32 +89,44 @@ func (s *AccrualService) UpdateOrdersStatus() {
 	reportTicker := time.NewTicker(time.Duration(1) * time.Second)
 	defer reportTicker.Stop()
 
-	s.GetStatusOrder(ordersChan, &wg)
+	s.GetStatusOrder(ordersChan)
 	wg.Add(1)
 	go func() {
 		for range pollTicker.C {
-			s.GetStatusOrder(ordersChan, &wg)
+			select {
+			case <-ctx.Done():
+				close(ordersChan)
+				return
+			default:
+				s.GetStatusOrder(ordersChan)
+			}
 		}
-		wg.Done()
+		defer wg.Done()
 	}()
 
 	wg.Add(1)
 	go func() {
 		for range reportTicker.C {
-			for order := range ordersChan {
-				resp, err := s.GetStatusAccrual(order, &wg)
-				if err != nil {
-					helpers.Error("submit order: CalcOrderAccrual: %v", err)
-					return
-				}
-				if resp.Status == models.PROCESSED || resp.Status == models.INVALID {
-					err := s.store.UpdateOrder(resp.Order, resp.Status, resp.Accrual)
+			select {
+			case <-ctx.Done():
+				close(ordersChan)
+				return
+			default:
+				for order := range ordersChan {
+					resp, err := s.GetStatusAccrual(order, &wg)
 					if err != nil {
-						helpers.Error("error update OrderAccrual: %s", err)
+						helpers.Error("submit order: CalcOrderAccrual: %v", err)
 						return
 					}
-				}
+					if resp.Status == models.PROCESSED || resp.Status == models.INVALID {
+						err := s.store.UpdateOrder(resp.Order, resp.Status, resp.Accrual)
+						if err != nil {
+							helpers.Error("error update OrderAccrual: %s", err)
+							return
+						}
+					}
 
+				}
 			}
 		}
 	}()
