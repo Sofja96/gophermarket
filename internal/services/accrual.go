@@ -92,16 +92,16 @@ func (s *AccrualService) UpdateOrdersStatus(ctx context.Context) {
 	s.GetStatusOrder(ordersChan)
 	wg.Add(1)
 	go func() {
+		defer close(ordersChan)
+		defer wg.Done()
 		for range pollTicker.C {
 			select {
 			case <-ctx.Done():
-				close(ordersChan)
 				return
 			default:
 				s.GetStatusOrder(ordersChan)
 			}
 		}
-		defer wg.Done()
 	}()
 
 	wg.Add(1)
@@ -109,7 +109,6 @@ func (s *AccrualService) UpdateOrdersStatus(ctx context.Context) {
 		for range reportTicker.C {
 			select {
 			case <-ctx.Done():
-				close(ordersChan)
 				return
 			default:
 				for order := range ordersChan {
